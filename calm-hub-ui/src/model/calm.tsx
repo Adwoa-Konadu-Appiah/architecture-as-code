@@ -9,4 +9,5 @@ export type Version = string;
 export type Data = {
     name: Namespace;
     data: Pattern | Architecture | Flow | undefined;
+    dataType: string;
 };

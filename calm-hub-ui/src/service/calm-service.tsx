@@ -116,7 +116,7 @@ export async function fetchPattern(
             }
         );
         const response = await res.json();
-        const data: Data = { name: namespace, data: response };
+        const data: Data = { name: namespace, data: response, dataType: "Pattern" };
         setPattern(data);
     } catch (error) {
         console.error(
@@ -145,7 +145,7 @@ export async function fetchFlow(
             }
         );
         const response = await res.json();
-        const data: Data = { name: namespace, data: response };
+        const data: Data = { name: namespace, data: response, dataType: "Flow" };
         setFlow(data);
     } catch (error) {
         console.error(
@@ -218,7 +218,7 @@ export async function fetchArchitecture(
             }
         );
         const response = await res.json();
-        const data: Data = { name: namespace, data: response };
+        const data: Data = { name: namespace, data: response, dataType: "Architecture" };
         setArchitecture(data);
     } catch (error) {
         console.error(

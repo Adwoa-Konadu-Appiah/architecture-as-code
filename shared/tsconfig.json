@@ -4,11 +4,10 @@
     "moduleResolution": "bundler",
     "compilerOptions": {
         "outDir": "dist",
+        "types": ["vite/client"]
     },
-    "include": ["src", "../vitest-globals.d.ts"],
+    "include": ["src", "../vitest-globals.d.ts", "vite-env.d.ts"],
     "lib": [
         "esnext"
     ]
-
-
 }

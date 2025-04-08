@@ -1,9 +1,9 @@
-import { readdir, readFile } from 'fs/promises';
-import { join } from 'path';
+// import { readdir, readFile } from 'fs/promises';
+// import { join } from 'path';
 import pointer from 'json-pointer';
 import { mergeSchemas, updateStringValuesRecursively } from './util.js';
-import { Logger } from 'winston';
-import { initLogger } from './logger.js';
+// import { Logger } from 'winston';
+// import { LoggerL, initLogger } from './logger.js';
 
 /**
  * Stores a directory of schemas and resolves references against that directory.
@@ -11,7 +11,7 @@ import { initLogger } from './logger.js';
  */
 export class SchemaDirectory {
     private readonly schemas: Map<string, object> = new Map<string, object>();
-    private readonly logger: Logger;
+    // private readonly logger: LoggerL;
 
     /**
      * Initialise the SchemaDirectory. Does not load the schemas until loadSchemas is called.
@@ -19,11 +19,11 @@ export class SchemaDirectory {
      * @param debug Whether to log at debug level.
      */
     constructor(debug: boolean = false) {
-        this.logger = initLogger(debug);
+        // this.logger = initLogger(debug);
     }
 
     public loadCurrentPatternAsSchema(pattern: object) {
-        this.logger.debug('Loading current pattern as a schema.');
+        // this.logger.debug('Loading current pattern as a schema.');
         this.schemas.set('pattern', pattern);
     }
 
@@ -34,35 +34,57 @@ export class SchemaDirectory {
      */
     public async loadSchemas(dir: string): Promise<void> {
         try {
-            const map = new Map<string, object>();
-
-            this.logger.debug('Loading schemas from ' + dir);
-            const files = await readdir(dir, { recursive: true });
-
-            const schemaPaths = files.filter(str => str.match(/^.*(json)$/))
-                .map(schemaPath => join(dir, schemaPath));
-            for (const schemaPath of schemaPaths) {
-                const schema = await this.loadSchema(schemaPath);
-                if (schema){
-                    map.set(schema['$id'], schema);
-                }
+          const map = new Map<string, object>();
+          let files: string[] = [];
+      
+        //   this.logger.debug('Loading schemas from ' + dir);
+      
+          if (typeof window === 'undefined') {
+            // Node environment
+            const { readdir, readFile } = await import('fs/promises');
+            const path = await import('path');
+            const entries = await readdir(dir, { recursive: true });
+      
+            // Filter JSON files
+            files = entries.filter(file => file.endsWith('.json')).map(file => path.join(dir, file));
+      
+            for (const schemaPath of files) {
+              const data = await readFile(schemaPath, 'utf-8');
+              const schema = JSON.parse(data);
+              if (schema?.$id) {
+                map.set(schema.$id, schema);
+              }
             }
-
-            map.forEach((val, key) => this.schemas.set(key, val));
-            this.logger.info(`Loaded ${this.schemas.size} schemas.`);
-            this.schemas.forEach((_schema, id) => {
-                this.logger.debug(`Schema ID: ${id}`);
-            });
-        } catch (err) {
-            if (err.code === 'ENOENT') {
-                this.logger.error('Schema Path not found: ' + dir + ', error: ' + err.message);
-            } else {
-                this.logger.error(err);
+      
+          } else {
+            // Browser environment
+            const modules = import.meta.glob(`../calm/pattern/*.json`, { eager: true });
+      
+            for (const [path, schema] of Object.entries(modules)) {
+              if (schema?.$id) {
+                map.set(schema.$id, schema);
+              }
             }
-            throw err;
+          }
+      
+          // Store schemas
+          map.forEach((val, key) => this.schemas.set(key, val));
+        //   this.logger.info(`Loaded ${this.schemas.size} schemas.`);
+          this.schemas.forEach((_schema, id) => {
+            // this.logger.debug(`Schema ID: ${id}`);
+          });
+      
+        } catch (err: any) {
+          const message = err?.message ?? String(err);
+          if (typeof err === 'object' && err?.code === 'ENOENT') {
+            // this.logger.info('Schema Path not found: ' + dir + ', error: ' + message);
+          } else {
+            // this.logger.info(message);
+          }
+          throw err;
         }
-    }
-
+      }
+      
     private lookupDefinition(schemaId: string, ref: string) {
         const schema = this.getSchema(schemaId);
         if (!schema) {
@@ -79,9 +101,9 @@ export class SchemaDirectory {
 
         if (!newSchemaId) {
             newSchemaId = currentSchemaId;
-            this.logger.debug(`Resolving reference ${ref} against current schema ${currentSchemaId}.`);
+            // this.logger.debug(`Resolving reference ${ref} against current schema ${currentSchemaId}.`);
         }
-        this.logger.debug(`Recursively resolving the reference, ref: ${ref}`);
+        // this.logger.debug(`Recursively resolving the reference, ref: ${ref}`);
         const definition = this.lookupDefinition(newSchemaId, ref);
         if (!definition) {
             // schema not defined
@@ -89,12 +111,12 @@ export class SchemaDirectory {
             return this.getMissingSchemaPlaceholder(definitionReference);
         }
         if (!definition['$ref']) {
-            this.logger.debug('Reached a definition with no ref, terminating recursive lookup.');
+            // this.logger.debug('Reached a definition with no ref, terminating recursive lookup.');
             return this.qualifyLocalReferences(definition, newSchemaId);
         }
         const newRef: string = definition['$ref'];
         if (visitedDefinitions.includes(newRef)) {
-            this.logger.warn('Circular reference detected. Terminating reference lookup. Visited definitions: ' + visitedDefinitions);
+            // this.logger.info('Circular reference detected. Terminating reference lookup. Visited definitions: ' + visitedDefinitions);
             return definition;
         }
         const innerDef = this.getDefinitionRecursive(newRef, newSchemaId, visitedDefinitions);
@@ -117,9 +139,9 @@ export class SchemaDirectory {
      * @returns The resolved object, or an empty object if the object could not be resolved.
      */
     public getDefinition(definitionReference: string) {
-        this.logger.debug(`Resolving ${definitionReference} from schema directory.`);
+        // this.logger.debug(`Resolving ${definitionReference} from schema directory.`);
         const definition = this.getDefinitionRecursive(definitionReference, 'pattern', []);
-        this.logger.debug(`Resolved definition ${JSON.stringify(definition, null, 2)}`);
+        // this.logger.debug(`Resolved definition ${JSON.stringify(definition, null, 2)}`);
         return definition;
     }
 
@@ -134,8 +156,8 @@ export class SchemaDirectory {
         return updateStringValuesRecursively(definition, (key, value) => {
             if (key === '$ref' && value.startsWith('#')) {
                 const newReference = schemaId + value;
-                this.logger.debug(`Detected a local reference: ${value}. Qualifying the reference with schema ID during resolution. `);
-                this.logger.debug(`Qualified reference: ${newReference}`);
+                // this.logger.debug(`Detected a local reference: ${value}. Qualifying the reference with schema ID during resolution. `);
+                // this.logger.debug(`Qualified reference: ${newReference}`);
                 return newReference;
             }
             return value;
@@ -157,25 +179,26 @@ export class SchemaDirectory {
     public getSchema(schemaId: string) {
         if (!this.schemas.has(schemaId)) {
             const registered = this.getLoadedSchemas();
-            this.logger.warn(`Schema with $id ${schemaId} not found. Returning empty object. Registered schemas: ${registered}`);
+            // this.logger.info(`Schema with $id ${schemaId} not found. Returning empty object. Registered schemas: ${registered}`);
             return undefined;
         }
         return this.schemas.get(schemaId);
     }
 
     private async loadSchema(schemaPath: string): Promise<object> {
-        this.logger.debug('Loading ' + schemaPath);
+        // this.logger.debug('Loading ' + schemaPath);
+        const { readFile } = await import('fs/promises');
         const str = await readFile(schemaPath, 'utf-8');
         const parsed = JSON.parse(str);
         const schemaId = parsed['$id'];
 
         if (!schemaId) {
-            this.logger.warn('Warning: bad schema found, no $id property was defined. Path: ', schemaPath);
+            // this.logger.info('Warning: bad schema found, no $id property was defined. Path: ', schemaPath);
             return;
         }
 
         if (!parsed['$schema']) {
-            this.logger.warn('Warning, loaded schema does not have $schema set and therefore may be invalid. Path: ', schemaPath);
+            // this.logger.info('Warning, loaded schema does not have $schema set and therefore may be invalid. Path: ', schemaPath);
         }
         
         return parsed;

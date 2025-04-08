@@ -1,4 +1,4 @@
-import { initLogger } from '../../../logger';
+// import { initLogger } from '../../../logger';
 import { SchemaDirectory } from '../../../schema-directory';
 import { getPropertyValue, JsonSchema } from './property';
 
@@ -136,12 +136,11 @@ function instantiateFromProperties(
  */
 export async function instantiate(
     patternObj: object,
-    debug: boolean,
     schemaDirectoryPath?: string
 ): Promise<unknown> {
     // I could cast this to CALMCoreSchema here but then need to change test to not show its completely generic
-    initLogger(debug);
-    const schemaDir = new SchemaDirectory(debug);
+    // initLogger(debug);
+    const schemaDir = new SchemaDirectory();
 
     if (schemaDirectoryPath) {
         await schemaDir.loadSchemas(schemaDirectoryPath);
