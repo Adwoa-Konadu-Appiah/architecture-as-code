@@ -4,7 +4,7 @@ import { initLogger } from '../logger.js';
 import { CalmCoreSchema } from '../types/core-types.js';
 
 export class CalmParser {
-    private static loggerPromise = initLogger(process.env.DEBUG === 'true', 'CalmParser');
+    private static loggerPromise = initLogger(process.env.DEBUG === 'true', 'calm-parser');
     private static logger: Awaited<ReturnType<typeof initLogger>>;
 
     private static async getLogger() {

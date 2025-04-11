@@ -129,7 +129,7 @@ export async function validate(
     metaSchemaPath: string,
     debug: boolean = false): Promise<ValidationOutcome> {
 
-    logger = await initLogger(debug);
+    logger = await initLogger(debug, 'calm-validate');
     try {
         if (jsonSchemaArchitectureLocation && jsonSchemaLocation) {
             return await validateArchitectureAgainstPattern(jsonSchemaArchitectureLocation, jsonSchemaLocation, metaSchemaPath, debug);

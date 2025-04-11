@@ -21,7 +21,7 @@ export class SchemaDirectory {
     }
 
     public async init(debug: boolean, label?: string) {
-        this.logger = await initLogger(debug, label);
+        this.logger = await initLogger(debug, 'schema-directory');
     }
 
     public loadCurrentPatternAsSchema(pattern: object) {
@@ -53,7 +53,11 @@ export class SchemaDirectory {
             }
 
             map.forEach((val, key) => this.schemas.set(key, val));
+<<<<<<< HEAD
             this.logger.log(this.logger.INFO,`Loaded ${this.schemas.size} schemas.`);
+=======
+            this.logger.debug(`Loaded ${this.schemas.size} schemas.`);
+>>>>>>> 0f31fb52fea10bf439ea8f94222c6117514c8905
             this.schemas.forEach((_schema, id) => {
                 this.logger.log(this.logger.INFO, `Schema ID: ${id}`);
             });
@@ -161,7 +165,14 @@ export class SchemaDirectory {
     public getSchema(schemaId: string) {
         if (!this.schemas.has(schemaId)) {
             const registered = this.getLoadedSchemas();
+<<<<<<< HEAD
             this.logger.log(this.logger.WARN,`Schema with $id ${schemaId} not found. Returning empty object. Registered schemas: ${registered}`);
+=======
+            this.logger.warn(`Schema with $id "${schemaId}" was not found.`);
+            this.logger.warn('It\'s likely that the pattern is outdated or this version of the tooling isn\'t compatible');
+            this.logger.warn('Please enable debug logging to see the registered schemas.');
+            this.logger.debug(`Registered schemas: ${registered}`);
+>>>>>>> 0f31fb52fea10bf439ea8f94222c6117514c8905
             return undefined;
         }
         return this.schemas.get(schemaId);

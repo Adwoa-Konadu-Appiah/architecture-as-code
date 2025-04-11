@@ -7,6 +7,7 @@ export async function runGenerate(pattern: object, outputPath: string, debug: bo
     const fs = require('node:fs');
     const path = require('node:path');
     const logger = initLogger(debug, 'calm-generate');
+    (await logger).log((await logger).INFO, 'Generating a CALM architecture...');
     try {
         if (chosenChoices) {
             pattern = selectChoices(pattern, chosenChoices, debug);
@@ -14,13 +15,13 @@ export async function runGenerate(pattern: object, outputPath: string, debug: bo
 
         const final = await instantiate(pattern, debug, schemaDirectoryPath);
         const output = JSON.stringify(final, null, 2);
-        const dirname = path.dirname(outputPath);
+        const dirname = path.dirname(outputPath); 
 
         mkdirp.sync(dirname);
         fs.writeFileSync(outputPath, output);
-    }
-    catch (err) {
-        (await logger).log((await logger).DEBUG, 'Error while generating architecture from pattern: ' + err.message);
+        (await logger).log((await logger).INFO,`Successfully generated architecture to [${outputPath}]`);
+    } catch (err) {
+        (await logger).log((await logger).DEBUG,'Error while generating architecture from pattern: ' + err.message);
         if (debug) {
             (await logger).log((await logger).DEBUG, err.stack);
         }
