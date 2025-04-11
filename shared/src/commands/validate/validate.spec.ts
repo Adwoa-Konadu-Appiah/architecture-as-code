@@ -21,19 +21,6 @@ vi.mock('@stoplight/spectral-core', async () => {
     };
 });
 
-vi.mock('../../logger.js', () => {
-    return {
-        initLogger: () => {
-            return {
-                info: vi.fn(),
-                debug: vi.fn(),
-                warn: vi.fn(),
-                error: vi.fn()
-            };
-        }
-    };
-});
-
 const metaSchemaLocation = 'test_fixtures/calm';
 const debugDisabled = false;
 

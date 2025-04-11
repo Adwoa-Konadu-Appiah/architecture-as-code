@@ -13,7 +13,7 @@ import createJUnitReport from './output-formats/junit-output.js';
 import prettyFormat from './output-formats/pretty-output.js';
 import { SchemaDirectory } from '../../schema-directory.js';
 
-let logger: winston.Logger; // defined later at startup
+let logger: Logger; // defined later at startup
 
 
 /**
@@ -38,7 +38,7 @@ export function formatOutput(
     validationOutcome: ValidationOutcome,
     format: OutputFormat
 ): string {
-    logger.info(`Formatting output as ${format}`);
+    logger.log(logger.INFO, `Formatting output as ${format}`);
     switch (format) {
     case 'junit': {
         const spectralRuleNames = extractSpectralRuleNames();
@@ -78,7 +78,7 @@ function buildAjv2020(schemaDirectory: SchemaDirectory, debug: boolean): Ajv2020
  * @returns an initialised SchemaDirectory.
  */
 async function loadMetaSchemas(metaSchemaLocation: string): Promise<SchemaDirectory> {
-    logger.info(`Loading meta schema(s) from ${metaSchemaLocation}`);
+    logger.log(logger.INFO, `Loading meta schema(s) from ${metaSchemaLocation}`);
 
     const schemaDirectory = new SchemaDirectory();
     await schemaDirectory.loadSchemas(metaSchemaLocation);
@@ -99,15 +99,15 @@ async function runSpectralValidations(
     const issues = await spectral.run(schema);
 
     if (issues && issues.length > 0) {
-        logger.debug(`Spectral raw output: ${prettifyJson(issues)}`);
+        logger.log(logger.DEBUG, `Spectral raw output: ${prettifyJson(issues)}`);
         sortSpectralIssueBySeverity(issues);
         spectralIssues = convertSpectralDiagnosticToValidationOutputs(issues);
         if (issues.filter(issue => issue.severity === 0).length > 0) {
-            logger.debug('Spectral output contains errors');
+            logger.log(logger.DEBUG, 'Spectral output contains errors');
             errors = true;
         }
         if (issues.filter(issue => issue.severity === 1).length > 0) {
-            logger.debug('Spectral output contains warnings');
+            logger.log(logger.DEBUG, 'Spectral output contains warnings');
             warnings = true;
         }
     }
@@ -129,7 +129,7 @@ export async function validate(
     metaSchemaPath: string,
     debug: boolean = false): Promise<ValidationOutcome> {
 
-    logger = initLogger(debug);
+    logger = await initLogger(debug);
     try {
         if (jsonSchemaArchitectureLocation && jsonSchemaLocation) {
             return await validateArchitectureAgainstPattern(jsonSchemaArchitectureLocation, jsonSchemaLocation, metaSchemaPath, debug);
@@ -138,11 +138,11 @@ export async function validate(
         } else if (jsonSchemaArchitectureLocation) {
             return await validateArchitectureOnly(jsonSchemaArchitectureLocation);
         } else {
-            logger.debug('You must provide at least an architecture or a pattern');
+            logger.log(logger.DEBUG, 'You must provide at least an architecture or a pattern');
             throw new Error('You must provide at least an architecture or a pattern');
         }
     } catch (error) {
-        logger.error('An error occured:', error);
+        logger.log(logger.ERROR, `An error occured: ${error}`);
         throw error;
     }
 }
@@ -160,12 +160,12 @@ async function validateArchitectureAgainstPattern(jsonSchemaArchitectureLocation
     const schemaDirectory = await loadMetaSchemas(metaSchemaPath);
     const ajv = buildAjv2020(schemaDirectory, debug);
 
-    logger.info(`Loading pattern from : ${jsonSchemaLocation}`);
+    logger.log(logger.INFO, `Loading pattern from : ${jsonSchemaLocation}`);
     const jsonSchema = await getFileFromUrlOrPath(jsonSchemaLocation);
     const spectralResultForPattern: SpectralResult = await runSpectralValidations(stripRefs(jsonSchema), validationRulesForPattern);
     const validateSchema = await ajv.compileAsync(jsonSchema);
 
-    logger.info(`Loading architecture from : ${jsonSchemaArchitectureLocation}`);
+    logger.log(logger.INFO, `Loading architecture from : ${jsonSchemaArchitectureLocation}`);
     const jsonSchemaArchitecture = await getFileFromUrlOrPath(jsonSchemaArchitectureLocation);
 
     const spectralResultForArchitecture: SpectralResult = await runSpectralValidations(jsonSchemaArchitecture, validationRulesForArchitecture);
@@ -178,7 +178,7 @@ async function validateArchitectureAgainstPattern(jsonSchemaArchitectureLocation
     let jsonSchemaValidations = [];
 
     if (!validateSchema(jsonSchemaArchitecture)) {
-        logger.debug(`JSON Schema validation raw output: ${prettifyJson(validateSchema.errors)}`);
+        logger.log(logger.DEBUG, `JSON Schema validation raw output: ${prettifyJson(validateSchema.errors)}`);
         errors = true;
         jsonSchemaValidations = convertJsonSchemaIssuesToValidationOutputs(validateSchema.errors);
     }
@@ -196,7 +196,7 @@ async function validateArchitectureAgainstPattern(jsonSchemaArchitectureLocation
  * @returns the validation outcome with the results of the spectral validation and the pattern compilation.
  */
 async function validatePatternOnly(jsonSchemaLocation: string, metaSchemaPath: string, debug: boolean): Promise<ValidationOutcome> {
-    logger.debug('Architecture was not provided, only the Pattern Schema will be validated');
+    logger.log(logger.DEBUG, 'Architecture was not provided, only the Pattern Schema will be validated');
     const schemaDirectory = await loadMetaSchemas(metaSchemaPath);
     const ajv = buildAjv2020(schemaDirectory, debug);
 
@@ -224,7 +224,7 @@ async function validatePatternOnly(jsonSchemaLocation: string, metaSchemaPath: s
  * @returns the validation outcome with the results of the spectral validation.
  */
 async function validateArchitectureOnly(architectureSchemaLocation: string): Promise<ValidationOutcome> {
-    logger.debug('Pattern was not provided, only the Architecture will be validated');
+    logger.log(logger.DEBUG, 'Pattern was not provided, only the Architecture will be validated');
     
     const jsonSchemaArchitecture = await getFileFromUrlOrPath(architectureSchemaLocation);
     const spectralResultForArchitecture: SpectralResult = await runSpectralValidations(jsonSchemaArchitecture, validationRulesForArchitecture); 

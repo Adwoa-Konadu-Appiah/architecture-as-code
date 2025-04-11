@@ -49,6 +49,7 @@ describe('TemplateProcessor', () => {
     let mockTransformer: ReturnType<typeof vi.mocked<CalmTemplateTransformer>>;
     let loggerInfoSpy: ReturnType<typeof vi.spyOn>;
     let loggerErrorSpy: ReturnType<typeof vi.spyOn>;
+    let mockLogger;
 
     beforeEach(() => {
         mockTransformer = {
@@ -56,8 +57,16 @@ describe('TemplateProcessor', () => {
             getTransformedModel: vi.fn().mockReturnValue({ transformed: true }),
         } as unknown as ReturnType<typeof vi.mocked<CalmTemplateTransformer>>;
 
-        loggerInfoSpy = vi.spyOn(TemplateProcessor['logger'], 'info').mockImplementation(vi.fn());
-        loggerErrorSpy = vi.spyOn(TemplateProcessor['logger'], 'error').mockImplementation(vi.fn());
+        mockLogger = {
+            log: vi.fn(),
+            INFO: 'info',
+            ERROR: 'error'
+        };
+
+        vi.stubGlobal('process', { env: { DEBUG: 'true' } });
+        vi.mock('../logger.js', async () => ({
+        initLogger: vi.fn().mockResolvedValue(mockLogger)
+        }));
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         vi.spyOn(TemplateProcessor.prototype as any, 'loadTransformer').mockReturnValue(mockTransformer);
@@ -77,7 +86,7 @@ describe('TemplateProcessor', () => {
         const processor = new TemplateProcessor('simple-nodes.json', 'bundle', 'output', new Map<string, string>());
         await processor.processTemplate();
         expect(loggerInfoSpy).toHaveBeenCalledWith(expect.stringContaining('🗑️ Cleaning up previous generation...'));
-        expect(loggerInfoSpy).toHaveBeenCalledWith(expect.stringContaining('✅ Template Generation Completed!'));
+        expect(mockLogger.log).toHaveBeenCalledWith('info', expect.stringContaining('✅ Template Generation Completed!'));
         expect(mockTemplateEngine.generate).toHaveBeenCalled();
         expect(mockTransformer.getTransformedModel).toHaveBeenCalledWith('{"some": "dereferencedData"}');
     });
@@ -87,7 +96,7 @@ describe('TemplateProcessor', () => {
             return !filePath.includes('simple-nodes.json');
         });
         const processor = new TemplateProcessor('simple-nodes.json', 'bundle', 'output', new Map<string, string>());
-        await expect(processor.processTemplate()).rejects.toThrow('CALM model file not found: ' + path.resolve('simple-nodes.json'));
+        expect(mockLogger.log).toHaveBeenCalledWith('error', expect.stringContaining('CALM model file not found'+ path.resolve('simple-nodes.json')));
         expect(loggerErrorSpy).toHaveBeenCalledWith(expect.stringContaining('❌ CALM model file not found'));
     });
 

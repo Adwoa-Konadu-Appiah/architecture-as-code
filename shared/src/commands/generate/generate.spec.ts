@@ -1,18 +1,19 @@
-import { runGenerate } from './generate';
+import { runGenerate , generateArcitectureInstanceFromPattern} from './generate';
 import { tmpdir } from 'node:os';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 
-vi.mock('../../logger', () => {
+vi.mock('../../../logger', async () => {
     return {
-        initLogger: () => {
-            return {
-                info: () => {},
-                debug: () => {}
-            };
-        }
+      initLogger: vi.fn().mockResolvedValue({
+        INFO: 'info',
+        DEBUG: 'debug',
+        WARN: 'warn',
+        ERROR: 'error',
+        log: vi.fn(), // 👈 this is crucial
+      }),
     };
-});
+  });
 
 vi.mock('../../schema-directory');
 
@@ -67,6 +68,20 @@ describe('runGenerate', () => {
 
         const spec = readFileSync(outPath, { encoding: 'utf-8' });
         const parsed = JSON.parse(spec);
+        expect(parsed)
+            .toHaveProperty('nodes');
+        expect(parsed)
+            .toHaveProperty('relationships');
+        expect(parsed)
+            .toHaveProperty('$schema');
+        expect(parsed['$schema'])
+            .toEqual('https://raw.githubusercontent.com/finos/architecture-as-code/main/calm/pattern/api-gateway');
+    });
+
+    it('instantiates to calm architecture string', async () => {
+        const instance = await generateArcitectureInstanceFromPattern(testPattern, false);
+
+        const parsed = JSON.parse(instance);
         expect(parsed)
             .toHaveProperty('nodes');
         expect(parsed)

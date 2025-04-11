@@ -1,14 +1,22 @@
 import $RefParser from '@apidevtools/json-schema-ref-parser';
-import {CalmReferenceResolver} from '../resolver/calm-reference-resolver.js';
+import { CalmReferenceResolver } from '../resolver/calm-reference-resolver.js';
 import { initLogger } from '../logger.js';
-
 
 export type CalmDocument = string;
 
 export class TemplateCalmFileDereferencer {
     private urlFileMapping: Map<string, string>;
     private resolver: CalmReferenceResolver;
-    private static logger = initLogger(process.env.DEBUG === 'true', TemplateCalmFileDereferencer.name);
+
+    private static loggerPromise = initLogger(process.env.DEBUG === 'true', TemplateCalmFileDereferencer.name);
+    private static logger: Awaited<ReturnType<typeof initLogger>>;
+
+    private static async getLogger() {
+        if (!TemplateCalmFileDereferencer.logger) {
+            TemplateCalmFileDereferencer.logger = await TemplateCalmFileDereferencer.loggerPromise;
+        }
+        return TemplateCalmFileDereferencer.logger;
+    }
 
     constructor(urlFileMapping: Map<string, string>, resolver: CalmReferenceResolver) {
         this.urlFileMapping = urlFileMapping;
@@ -24,7 +32,9 @@ export class TemplateCalmFileDereferencer {
         } else if (typeof data === 'object' && data !== null) {
             return Object.fromEntries(
                 Object.entries(data).map(([key, value]) =>
-                    key === '$id' || key === '$schema' ? [key, value] : [key, this.replaceUrlsWithRefs(value)]
+                    key === '$id' || key === '$schema'
+                        ? [key, value]
+                        : [key, this.replaceUrlsWithRefs(value)]
                 )
             );
         }
@@ -32,7 +42,7 @@ export class TemplateCalmFileDereferencer {
     }
 
     public async dereferenceCalmDoc(doc: CalmDocument): Promise<string> {
-        const logger =  TemplateCalmFileDereferencer.logger;
+        const logger = await TemplateCalmFileDereferencer.getLogger();
         const partiallyDereferenced = this.replaceUrlsWithRefs(JSON.parse(doc));
 
         const fullyDereferenced = await $RefParser.dereference(partiallyDereferenced, {
@@ -40,11 +50,11 @@ export class TemplateCalmFileDereferencer {
                 calmResolver: {
                     order: 1,
                     canRead: (file: { url: string }) => {
-                        logger.debug(`Checking if canRead: ${file.url}`);
+                        logger.log(logger.DEBUG, `Checking if canRead: ${file.url}`);
                         return this.resolver.canResolve(file.url);
                     },
                     read: async (file: { url: string }) => {
-                        logger.debug(`Resolving: ${file.url}`);
+                        logger.log(logger.DEBUG, `Resolving: ${file.url}`);
                         const result = await this.resolver.resolve(file.url);
                         const mappedContent = this.replaceUrlsWithRefs(result);
                         return JSON.stringify(mappedContent);

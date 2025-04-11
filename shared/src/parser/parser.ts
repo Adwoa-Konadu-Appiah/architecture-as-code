@@ -1,23 +1,31 @@
 import { CalmCore } from '../model/core.js';
 import fs from 'fs';
 import { initLogger } from '../logger.js';
-import {CalmCoreSchema} from '../types/core-types.js';
+import { CalmCoreSchema } from '../types/core-types.js';
 
 export class CalmParser {
+    private static loggerPromise = initLogger(process.env.DEBUG === 'true', 'CalmParser');
+    private static logger: Awaited<ReturnType<typeof initLogger>>;
 
-    private static logger = initLogger(process.env.DEBUG === 'true');
+    private static async getLogger() {
+        if (!CalmParser.logger) {
+            CalmParser.logger = await CalmParser.loggerPromise;
+        }
+        return CalmParser.logger;
+    }
 
-    parse(coreCalmFilePath: string): CalmCore {
-        const logger = CalmParser.logger;
+    public async parse(coreCalmFilePath: string): Promise<CalmCore> {
+        const logger = await CalmParser.getLogger();
         try {
             const data = fs.readFileSync(coreCalmFilePath, 'utf8');
-            const dereferencedData: CalmCoreSchema = JSON.parse(data); // TODO: this needs to use SchemaDirectory to parse the other documents e.g. flows.
-            dereferencedData.flows = []; // If this ends up being string documents then this will break CalmFlow.fromJson
-            dereferencedData.controls = {}; // If this ends up being string documents then this will break CalmControl.fromJson
+            const dereferencedData: CalmCoreSchema = JSON.parse(data); // TODO: use SchemaDirectory
+            dereferencedData.flows = [];
+            dereferencedData.controls = {};
             return CalmCore.fromJson(dereferencedData);
         } catch (error) {
-            logger.error('Failed to parse calm.json:', error);
+            logger.log(logger.ERROR, `❌ Failed to parse calm.json: ${error.message}`);
             throw error;
         }
     }
 }
+

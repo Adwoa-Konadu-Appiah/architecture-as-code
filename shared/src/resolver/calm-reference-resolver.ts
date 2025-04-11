@@ -8,16 +8,23 @@ export interface CalmReferenceResolver {
 }
 
 export class FileReferenceResolver implements CalmReferenceResolver {
+    private static loggerPromise = initLogger(process.env.DEBUG === 'true', FileReferenceResolver.name);
+    private static logger: Awaited<ReturnType<typeof initLogger>>;
 
-    private static logger = initLogger(process.env.DEBUG === 'true', FileReferenceResolver.name);
+    private static async getLogger() {
+        if (!FileReferenceResolver.logger) {
+            FileReferenceResolver.logger = await FileReferenceResolver.loggerPromise;
+        }
+        return FileReferenceResolver.logger;
+    }
 
     canResolve(ref: string): boolean {
         return fs.existsSync(ref);
     }
 
     async resolve(ref: string): Promise<unknown> {
-        const logger = FileReferenceResolver.logger;
-        logger.info(`Resolving reference: ${ref}`);
+        const logger = await FileReferenceResolver.getLogger();
+        logger.log(logger.INFO, `Resolving reference: ${ref}`);
 
         if (!fs.existsSync(ref)) {
             throw new Error(`File not found: ${ref}`);
@@ -46,17 +53,24 @@ export class InMemoryResolver implements CalmReferenceResolver {
     }
 }
 
-
 export class HttpReferenceResolver implements CalmReferenceResolver {
-    private static logger = initLogger(process.env.DEBUG === 'true', HttpReferenceResolver.name);
+    private static loggerPromise = initLogger(process.env.DEBUG === 'true', HttpReferenceResolver.name);
+    private static logger: Awaited<ReturnType<typeof initLogger>>;
+
+    private static async getLogger() {
+        if (!HttpReferenceResolver.logger) {
+            HttpReferenceResolver.logger = await HttpReferenceResolver.loggerPromise;
+        }
+        return HttpReferenceResolver.logger;
+    }
 
     canResolve(ref: string): boolean {
         return ref.startsWith('http://') || ref.startsWith('https://');
     }
 
     async resolve(ref: string): Promise<unknown> {
-        const logger = HttpReferenceResolver.logger;
-        logger.info(`Fetching reference via HTTP: ${ref}`);
+        const logger = await HttpReferenceResolver.getLogger();
+        logger.log(logger.INFO, `Fetching reference via HTTP: ${ref}`);
         try {
             const response = await axios.get(ref);
             return response.data;
@@ -70,7 +84,16 @@ export class HttpReferenceResolver implements CalmReferenceResolver {
 }
 
 export class CompositeReferenceResolver implements CalmReferenceResolver {
-    private static logger = initLogger(process.env.DEBUG === 'true', CompositeReferenceResolver.name);
+    private static loggerPromise = initLogger(process.env.DEBUG === 'true', CompositeReferenceResolver.name);
+    private static logger: Awaited<ReturnType<typeof initLogger>>;
+
+    private static async getLogger() {
+        if (!CompositeReferenceResolver.logger) {
+            CompositeReferenceResolver.logger = await CompositeReferenceResolver.loggerPromise;
+        }
+        return CompositeReferenceResolver.logger;
+    }
+
     private httpResolver: HttpReferenceResolver;
     private fileResolver: FileReferenceResolver;
 
@@ -84,20 +107,24 @@ export class CompositeReferenceResolver implements CalmReferenceResolver {
     }
 
     async resolve(ref: string): Promise<unknown> {
+        const logger = await CompositeReferenceResolver.getLogger();
+
         if (this.fileResolver.canResolve(ref)) {
             try {
                 return await this.fileResolver.resolve(ref);
             } catch (error) {
-                CompositeReferenceResolver.logger.debug(`File resolution failed for ${ref} with ${error} - falling back to http-based resolver`);
+                logger.log(logger.DEBUG, `File resolution failed for ${ref} with ${error} - falling back to HTTP resolver`);
             }
         }
+
         if (this.httpResolver.canResolve(ref)) {
             try {
                 return await this.httpResolver.resolve(ref);
             } catch (error) {
-                CompositeReferenceResolver.logger.info(`HTTP resolution failed for ${ref} with ${error}`);
+                logger.log(logger.INFO, `HTTP resolution failed for ${ref} with ${error}`);
             }
         }
+
         throw new Error(`Composite resolver: Unable to resolve reference ${ref}`);
     }
 }

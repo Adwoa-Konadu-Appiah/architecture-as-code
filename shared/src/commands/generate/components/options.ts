@@ -41,8 +41,8 @@ function extractOptionsFromBlock(optionsRelationship: object, blockType: 'oneOf'
  * @param debug - Whether to enable debug logging
  * @returns A list of options that the user can choose from
  */
-export function extractOptions(pattern: object, debug: boolean = false): CalmOption[] {
-    const logger = initLogger(debug, 'calm-generate-options');
+export async function extractOptions(pattern: object, debug: boolean = false): Promise<CalmOption[]> {
+    const logger = await initLogger(debug, 'calm-generate-options');
     const calmItems: object[] = pattern['properties']['relationships']['prefixItems'];
 
     const options: CalmOption[] = calmItems
@@ -52,7 +52,7 @@ export function extractOptions(pattern: object, debug: boolean = false): CalmOpt
             ...extractOptionsFromBlock(optionsRel, 'anyOf')
         ]);
 
-    logger.debug(`Found the following options in the pattern: ${options}`);
+    logger.log(logger.DEBUG,`Found the following options in the pattern: ${options}`);
     return options;
 }
 
@@ -114,9 +114,9 @@ function flattenOptionsRelationships(pattern: object, choices: CalmChoice[]): vo
  * @param debug - Whether to enable debug logging
  * @returns A new pattern object with the selected choices and all oneOf and anyOf blocks flattened
  */
-export function selectChoices(inputPattern: object, choices: CalmChoice[], debug: boolean = false): object {
-    const logger = initLogger(debug, 'calm-generate-options');
-    logger.info(`Selecting these choices from the pattern [${JSON.stringify(choices)}]`);
+export async function selectChoices(inputPattern: object, choices: CalmChoice[], debug: boolean = false): Promise<object> {
+    const logger = await initLogger(debug, 'calm-generate-options');
+    logger.log(logger.INFO, `Selecting these choices from the pattern [${JSON.stringify(choices)}]`);
 
     const pattern = {...inputPattern}; // make a copy so we don't mutate the input pattern
     const nodeIds: string[] = choices.flatMap(choice => choice.nodes);
@@ -127,6 +127,6 @@ export function selectChoices(inputPattern: object, choices: CalmChoice[], debug
 
     flattenOptionsRelationships(pattern, choices);
     
-    logger.debug(`Pattern with all non chosen choices removed: [${JSON.stringify(pattern)}]`);
+    logger.log(logger.DEBUG, `Pattern with all non chosen choices removed: [${JSON.stringify(pattern)}]`);
     return pattern;
 }

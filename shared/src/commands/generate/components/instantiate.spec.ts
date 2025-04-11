@@ -22,6 +22,7 @@ vi.mock('../../../logger', () => ({
 vi.mock('../../../schema-directory', async () => {
     return {
         SchemaDirectory: vi.fn().mockImplementation(() => ({
+            init: vi.fn(),
             loadSchemas: vi.fn(),
             loadCurrentPatternAsSchema: vi.fn(),
             getDefinition: vi.fn((ref) => {
