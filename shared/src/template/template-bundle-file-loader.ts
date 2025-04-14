@@ -7,22 +7,14 @@ export class TemplateBundleFileLoader {
     private readonly templateBundlePath: string;
     private config: IndexFile;  // Changed to allow async assignment
     private templateFiles: Record<string, string>;  // Changed to allow async assignment
-    private static loggerPromise = initLogger(process.env.DEBUG === 'true', TemplateBundleFileLoader.name);
-    private static logger: Awaited<ReturnType<typeof initLogger>>;
-
+    
     constructor(templateBundlePath: string) {
         this.templateBundlePath = templateBundlePath;
     }
 
-    private async getLogger() {
-        if (!TemplateBundleFileLoader.logger) {
-            TemplateBundleFileLoader.logger = await TemplateBundleFileLoader.loggerPromise;
-        }
-        return TemplateBundleFileLoader.logger;
-    }
-
     private async loadConfig(): Promise<IndexFile> {
-        const logger = await this.getLogger();  // Await logger initialization
+        const logger = await initLogger(process.env.DEBUG === 'true', TemplateBundleFileLoader.name);
+
         const indexFilePath = path.join(this.templateBundlePath, 'index.json');
 
         if (!fs.existsSync(indexFilePath)) {
@@ -48,7 +40,8 @@ export class TemplateBundleFileLoader {
     }
 
     private async loadTemplateFiles(): Promise<Record<string, string>> {
-        const logger = await this.getLogger();  // Await logger initialization
+        const logger = await initLogger(process.env.DEBUG === 'true', TemplateBundleFileLoader.name);
+
         const templates: Record<string, string> = {};
         const templateDir = this.templateBundlePath;
 

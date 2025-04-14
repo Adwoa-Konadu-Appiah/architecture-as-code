@@ -8,16 +8,6 @@ export class TemplateCalmFileDereferencer {
     private urlFileMapping: Map<string, string>;
     private resolver: CalmReferenceResolver;
 
-    private static loggerPromise = initLogger(process.env.DEBUG === 'true', TemplateCalmFileDereferencer.name);
-    private static logger: Awaited<ReturnType<typeof initLogger>>;
-
-    private static async getLogger() {
-        if (!TemplateCalmFileDereferencer.logger) {
-            TemplateCalmFileDereferencer.logger = await TemplateCalmFileDereferencer.loggerPromise;
-        }
-        return TemplateCalmFileDereferencer.logger;
-    }
-
     constructor(urlFileMapping: Map<string, string>, resolver: CalmReferenceResolver) {
         this.urlFileMapping = urlFileMapping;
         this.resolver = resolver;
@@ -42,7 +32,7 @@ export class TemplateCalmFileDereferencer {
     }
 
     public async dereferenceCalmDoc(doc: CalmDocument): Promise<string> {
-        const logger = await TemplateCalmFileDereferencer.getLogger();
+        const logger = await initLogger(process.env.DEBUG === 'true', TemplateCalmFileDereferencer.name);
         const partiallyDereferenced = this.replaceUrlsWithRefs(JSON.parse(doc));
 
         const fullyDereferenced = await $RefParser.dereference(partiallyDereferenced, {

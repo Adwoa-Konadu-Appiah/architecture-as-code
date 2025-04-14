@@ -128,7 +128,7 @@ function buildPattern(nodes: object[], relationships: object[]) {
 
 describe('Pattern Options', () => {
     describe('optionsFor', () => {
-        it('should return a oneOf option from a spec', () => {
+        it('should return a oneOf option from a spec', async () => {
             const applicationAtoC: CalmChoice = {
                 description: 'Application A connects to Application C',
                 nodes: ['application-a'],
@@ -158,10 +158,10 @@ describe('Pattern Options', () => {
                 choices: [applicationAtoC, applicationBtoC]
             }];
 
-            expect(extractOptions(pattern)).toEqual(expectedOptions);
+            expect(await extractOptions(pattern)).toEqual(expectedOptions);
         });
 
-        it('should return an anyOf option from a spec', () => {
+        it('should return an anyOf option from a spec', async () => {
             const pattern = buildPattern(
                 [],
                 [buildPatternOptionRelationship(
@@ -177,10 +177,10 @@ describe('Pattern Options', () => {
                 choices: [applicationAtoC, applicationBtoC]
             }];
 
-            expect(extractOptions(pattern)).toEqual(expectedOptions);
+            expect(await extractOptions(pattern)).toEqual(expectedOptions);
         });
 
-        it('should return no options from a spec that contains no options relationship', () => {
+        it('should return no options from a spec that contains no options relationship', async () => {
             const patternWithNoRelationships = {
                 'properties': {
                     'relationships': {
@@ -189,10 +189,10 @@ describe('Pattern Options', () => {
                 }
             };
 
-            expect(extractOptions(patternWithNoRelationships)).toEqual([]);
+            expect(await extractOptions(patternWithNoRelationships)).toEqual([]);
         });
 
-        it('should return multiple options from a spec', () => {
+        it('should return multiple options from a spec', async () => {
             const pattern = buildPattern(
                 [],
                 [
@@ -222,12 +222,12 @@ describe('Pattern Options', () => {
                 }
             ];
 
-            expect(extractOptions(pattern)).toEqual(expectedOptions);
+            expect(await extractOptions(pattern)).toEqual(expectedOptions);
         });
     });
 
     describe('selectChoices', () => {
-        it('should remove items not selected from pattern', () => {
+        it('should remove items not selected from pattern', async () => {
             const applicationA = buildNode('application-a');
             const applicationB = buildNode('application-b');
             const applicationC = buildNode('application-c');
@@ -265,10 +265,10 @@ describe('Pattern Options', () => {
                     connectsRelationshipA,
                 ]
             );
-            expect(selectChoices(pattern, choices)).toEqual(expectedPattern);
+            expect(await selectChoices(pattern, choices)).toEqual(expectedPattern);
         });
 
-        it('should not affect a normal pattern', () => {
+        it('should not affect a normal pattern', async () => {
             const applicationA = buildNode('application-a');
             const applicationB = buildNode('application-b');
             const applicationC = buildNode('application-c');
@@ -284,7 +284,7 @@ describe('Pattern Options', () => {
                 [ applicationA, applicationB, applicationC ],
                 [ connectsRelationshipA, connectsRelationshipB ]
             );
-            expect(selectChoices(pattern, [])).toEqual(expectedPattern);
+            expect(await selectChoices(pattern, [])).toEqual(expectedPattern);
         });
     });
 });

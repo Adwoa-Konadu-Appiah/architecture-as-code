@@ -38,7 +38,7 @@ describe('runGenerate E2E', () => {
 
     it('generates output from pattern and matches expected file', async () => {
         const inputPattern = JSON.parse(readFileSync(inputPatternPath, 'utf-8'));
-        await runGenerate(inputPattern, outputPath, true, [],  schemaDir);
+        runGenerate(inputPattern, outputPath, true, [],  schemaDir);
 
         expect(existsSync(outputPath)).toBe(true);
 

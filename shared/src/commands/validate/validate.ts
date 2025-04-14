@@ -5,15 +5,12 @@ import { Spectral, ISpectralDiagnostic, RulesetDefinition } from '@stoplight/spe
 import validationRulesForPattern from '../../spectral/rules-pattern';
 import validationRulesForArchitecture from '../../spectral/rules-architecture';
 import { DiagnosticSeverity } from '@stoplight/types';
-import * as winston from 'winston';
 import { initLogger } from '../../logger.js';
 import { ValidationOutput, ValidationOutcome } from './validation.output.js';
 import { SpectralResult } from './spectral.result.js';
 import createJUnitReport from './output-formats/junit-output.js';
 import prettyFormat from './output-formats/pretty-output.js';
 import { SchemaDirectory } from '../../schema-directory.js';
-
-let logger: Logger; // defined later at startup
 
 
 /**
@@ -34,10 +31,11 @@ export function exitBasedOffOfValidationOutcome(validationOutcome: ValidationOut
 
 export type OutputFormat = 'junit' | 'json' | 'pretty'
 
-export function formatOutput(
+export async function formatOutput(
     validationOutcome: ValidationOutcome,
     format: OutputFormat
-): string {
+): Promise<string> {
+    const logger = await initLogger(false, 'calm-validate');
     logger.log(logger.INFO, `Formatting output as ${format}`);
     switch (format) {
     case 'junit': {
@@ -63,7 +61,7 @@ function buildAjv2020(schemaDirectory: SchemaDirectory, debug: boolean): Ajv2020
     return new Ajv2020({
         strict: strictType, allErrors: true, loadSchema: async (schemaId) => {
             try {
-                return schemaDirectory.getSchema(schemaId);
+                return await schemaDirectory.getSchema(schemaId);
             } catch (error) {
                 console.error(`Error fetching schema: ${error.message}`);
             }
@@ -78,6 +76,7 @@ function buildAjv2020(schemaDirectory: SchemaDirectory, debug: boolean): Ajv2020
  * @returns an initialised SchemaDirectory.
  */
 async function loadMetaSchemas(metaSchemaLocation: string): Promise<SchemaDirectory> {
+    const logger = await initLogger(false, 'calm-validate');
     logger.log(logger.INFO, `Loading meta schema(s) from ${metaSchemaLocation}`);
 
     const schemaDirectory = new SchemaDirectory();
@@ -90,6 +89,7 @@ async function runSpectralValidations(
     schema: string,
     spectralRuleset: RulesetDefinition
 ): Promise<SpectralResult> {
+    const logger = await initLogger(false, 'calm-validate');
     let errors = false;
     let warnings = false;
     let spectralIssues: ValidationOutput[] = [];
@@ -129,7 +129,7 @@ export async function validate(
     metaSchemaPath: string,
     debug: boolean = false): Promise<ValidationOutcome> {
 
-    logger = await initLogger(debug, 'calm-validate');
+    const logger = await initLogger(debug, 'calm-validate');
     try {
         if (jsonSchemaArchitectureLocation && jsonSchemaLocation) {
             return await validateArchitectureAgainstPattern(jsonSchemaArchitectureLocation, jsonSchemaLocation, metaSchemaPath, debug);
@@ -159,6 +159,7 @@ export async function validate(
 async function validateArchitectureAgainstPattern(jsonSchemaArchitectureLocation:string, jsonSchemaLocation:string, metaSchemaPath:string, debug: boolean): Promise<ValidationOutcome>{
     const schemaDirectory = await loadMetaSchemas(metaSchemaPath);
     const ajv = buildAjv2020(schemaDirectory, debug);
+    const logger = await initLogger(false, 'calm-validate');
 
     logger.log(logger.INFO, `Loading pattern from : ${jsonSchemaLocation}`);
     const jsonSchema = await getFileFromUrlOrPath(jsonSchemaLocation);
@@ -196,6 +197,7 @@ async function validateArchitectureAgainstPattern(jsonSchemaArchitectureLocation
  * @returns the validation outcome with the results of the spectral validation and the pattern compilation.
  */
 async function validatePatternOnly(jsonSchemaLocation: string, metaSchemaPath: string, debug: boolean): Promise<ValidationOutcome> {
+    const logger = await initLogger(false, 'calm-validate');
     logger.log(logger.DEBUG, 'Architecture was not provided, only the Pattern Schema will be validated');
     const schemaDirectory = await loadMetaSchemas(metaSchemaPath);
     const ajv = buildAjv2020(schemaDirectory, debug);
@@ -224,6 +226,7 @@ async function validatePatternOnly(jsonSchemaLocation: string, metaSchemaPath: s
  * @returns the validation outcome with the results of the spectral validation.
  */
 async function validateArchitectureOnly(architectureSchemaLocation: string): Promise<ValidationOutcome> {
+    const logger = await initLogger(false, 'calm-validate');
     logger.log(logger.DEBUG, 'Pattern was not provided, only the Architecture will be validated');
     
     const jsonSchemaArchitecture = await getFileFromUrlOrPath(architectureSchemaLocation);

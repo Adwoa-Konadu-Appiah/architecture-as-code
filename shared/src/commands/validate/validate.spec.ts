@@ -21,6 +21,30 @@ vi.mock('@stoplight/spectral-core', async () => {
     };
 });
 
+beforeEach(() => {
+  vi.mock('../../logger', () => ({
+    initLogger: vi.fn().mockResolvedValue({
+      DEBUG: 0,
+      INFO: 1,
+      WARN: 2,
+      ERROR: 3,
+      methodMap: {
+        0: 'debug',
+        1: 'info',
+        2: 'warn',
+        3: 'error',
+      },
+      level: 1,
+      log: vi.fn(),
+    }),
+  }));
+});
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
+  
+
 const metaSchemaLocation = 'test_fixtures/calm';
 const debugDisabled = false;
 

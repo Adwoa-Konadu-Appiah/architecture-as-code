@@ -4,7 +4,7 @@ import { promises as fsPromises } from 'fs';
 import { TemplateProcessor } from './template-processor';
 import {CalmNodeSchema} from '../types/core-types';
 import {CalmInterfaceTypeSchema} from '../types/interface-types';
-const FIXTURES_DIR = path.resolve(__dirname, '../../test_fixtures/template');
+const FIXTURES_DIR = path.resolve(__dirname, '/../test_fixtures/template');
 const WORKSHOP_DIR = path.resolve(__dirname, '../../../calm/workshop');
 const WORKSHOP_ARCH_DIR = path.resolve(__dirname, '../../test_fixtures/command/generate/expected-output');
 const OUTPUT_DIR = path.join(FIXTURES_DIR, 'generated-output');

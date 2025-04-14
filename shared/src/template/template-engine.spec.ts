@@ -24,8 +24,8 @@ describe('TemplateEngine', () => {
             getTransformedModel: vi.fn(),
         } as unknown as ReturnType<typeof vi.mocked<CalmTemplateTransformer>>;
 
-        loggerInfoSpy = vi.spyOn(TemplateEngine['logger'], 'info').mockImplementation(vi.fn());
-        loggerWarnSpy = vi.spyOn(TemplateEngine['logger'], 'warn').mockImplementation(vi.fn());
+        loggerInfoSpy = vi.spyOn(console, 'info');  
+        loggerWarnSpy = vi.spyOn(console, 'warn'); 
     });
 
     afterEach(() => {

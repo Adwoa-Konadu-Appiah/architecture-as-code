@@ -141,8 +141,7 @@ export async function instantiate(
 ): Promise<unknown> {
     // I could cast this to CALMCoreSchema here but then need to change test to not show its completely generic
     initLogger(debug, 'calm-generate');
-    const schemaDir = new SchemaDirectory();
-    await schemaDir.init(debug);
+    const schemaDir = new SchemaDirectory(debug);
 
     if (schemaDirectoryPath) {
         await schemaDir.loadSchemas(schemaDirectoryPath);

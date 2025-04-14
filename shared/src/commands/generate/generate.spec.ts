@@ -10,7 +10,7 @@ vi.mock('../../../logger', async () => {
         DEBUG: 'debug',
         WARN: 'warn',
         ERROR: 'error',
-        log: vi.fn(), // 👈 this is crucial
+        log: vi.fn(), 
       }),
     };
   });

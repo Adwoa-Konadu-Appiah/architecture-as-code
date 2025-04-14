@@ -18,15 +18,6 @@ export class TemplateProcessor {
     private readonly outputPath: string;
     private readonly urlToLocalPathMapping: Map<string, string>;
 
-    private static loggerPromise = initLogger(process.env.DEBUG === 'true', TemplateProcessor.name);
-    private static logger: Awaited<ReturnType<typeof initLogger>>;
-    private static async getLogger() {
-        if (!TemplateProcessor.logger) {
-            TemplateProcessor.logger = await TemplateProcessor.loggerPromise;
-        }
-        return TemplateProcessor.logger;
-    }
-
     constructor(inputPath: string, templateBundlePath: string, outputPath: string, urlToLocalPathMapping: Map<string, string>) {
         this.inputPath = inputPath;
         this.templateBundlePath = templateBundlePath;
@@ -35,8 +26,7 @@ export class TemplateProcessor {
     }
 
     public async processTemplate(): Promise<void> {
-        const logger = await TemplateProcessor.getLogger();
-
+        const logger = await initLogger(process.env.DEBUG === 'true', TemplateProcessor.name);
         const resolvedInputPath = path.resolve(this.inputPath);
         const resolvedBundlePath = path.resolve(this.templateBundlePath);
         const resolvedOutputPath = path.resolve(this.outputPath);
