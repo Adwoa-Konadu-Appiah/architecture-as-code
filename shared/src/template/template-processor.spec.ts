@@ -45,28 +45,21 @@ vi.mock('./template-calm-file-dereferencer', () => ({
     FileReferenceResolver: vi.fn()
 }));
 
+
 describe('TemplateProcessor', () => {
     let mockTransformer: ReturnType<typeof vi.mocked<CalmTemplateTransformer>>;
-    let loggerInfoSpy: ReturnType<typeof vi.spyOn>;
-    let loggerErrorSpy: ReturnType<typeof vi.spyOn>;
-    let mockLogger;
+    let loggerLogSpy: ReturnType<typeof vi.spyOn>;
+    let mockLogger: Logger;
 
-    beforeEach(() => {
+    beforeEach(async () => {
         mockTransformer = {
             registerTemplateHelpers: vi.fn().mockReturnValue({}),
             getTransformedModel: vi.fn().mockReturnValue({ transformed: true }),
         } as unknown as ReturnType<typeof vi.mocked<CalmTemplateTransformer>>;
 
-        mockLogger = {
-            log: vi.fn(),
-            INFO: 'info',
-            ERROR: 'error'
-        };
+        mockLogger = await TemplateProcessor["logger"];
 
-        vi.stubGlobal('process', { env: { DEBUG: 'true' } });
-        vi.mock('../logger.js', async () => ({
-        initLogger: vi.fn().mockResolvedValue(mockLogger)
-        }));
+        loggerLogSpy = vi.spyOn(mockLogger, 'log').mockImplementation(vi.fn());
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         vi.spyOn(TemplateProcessor.prototype as any, 'loadTransformer').mockReturnValue(mockTransformer);
@@ -85,8 +78,8 @@ describe('TemplateProcessor', () => {
     it('should successfully process a template', async () => {
         const processor = new TemplateProcessor('simple-nodes.json', 'bundle', 'output', new Map<string, string>());
         await processor.processTemplate();
-        expect(loggerInfoSpy).toHaveBeenCalledWith(expect.stringContaining('🗑️ Cleaning up previous generation...'));
-        expect(mockLogger.log).toHaveBeenCalledWith('info', expect.stringContaining('✅ Template Generation Completed!'));
+        expect(loggerLogSpy).toHaveBeenCalledWith(mockLogger.INFO,expect.stringContaining('🗑️ Cleaning up previous generation...'));
+        expect(loggerLogSpy).toHaveBeenCalledWith(mockLogger.INFO,expect.stringContaining('✅ Template Generation Completed!'));
         expect(mockTemplateEngine.generate).toHaveBeenCalled();
         expect(mockTransformer.getTransformedModel).toHaveBeenCalledWith('{"some": "dereferencedData"}');
     });
@@ -96,8 +89,8 @@ describe('TemplateProcessor', () => {
             return !filePath.includes('simple-nodes.json');
         });
         const processor = new TemplateProcessor('simple-nodes.json', 'bundle', 'output', new Map<string, string>());
-        expect(mockLogger.log).toHaveBeenCalledWith('error', expect.stringContaining('CALM model file not found'+ path.resolve('simple-nodes.json')));
-        expect(loggerErrorSpy).toHaveBeenCalledWith(expect.stringContaining('❌ CALM model file not found'));
+        await expect(processor.processTemplate()).rejects.toThrow('CALM model file not found: ' + path.resolve('simple-nodes.json'));
+        expect(loggerLogSpy).toHaveBeenCalledWith(mockLogger.ERROR, expect.stringContaining('❌ CALM model file not found'));
     });
 
     it('should throw an error if loadTransformer fails', async () => {
@@ -113,7 +106,7 @@ describe('TemplateProcessor', () => {
         });
         const processor = new TemplateProcessor('simple-nodes.json', 'bundle', 'output', new Map<string, string>());
         await expect(processor.processTemplate()).rejects.toThrow('❌ Error generating template: TransformerClass is undefined.');
-        expect(loggerErrorSpy).toHaveBeenCalledWith(expect.stringContaining('❌ Error generating template: TransformerClass is undefined.'));
+        expect(loggerLogSpy).toHaveBeenCalledWith(mockLogger.ERROR, expect.stringContaining('❌ Error generating template: TransformerClass is undefined.'));
     });
 
     it('should pass the urlToLocalPathMapping to the TemplateCalmFileRefResolver', async () => {
@@ -128,6 +121,6 @@ describe('TemplateProcessor', () => {
         (mockDereferencer.dereferenceCalmDoc as Mock).mockRejectedValue(new Error('Dereference failed'));
         const processor = new TemplateProcessor('simple-nodes.json', 'bundle', 'output', new Map<string, string>());
         await expect(processor.processTemplate()).rejects.toThrow('Dereference failed');
-        expect(loggerErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Dereference failed'));
+        expect(loggerLogSpy).toHaveBeenCalledWith(mockLogger.ERROR, expect.stringContaining('Dereference failed'));
     });
 });

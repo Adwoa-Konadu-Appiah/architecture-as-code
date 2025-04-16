@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { allExpanded, defaultStyles, JsonView } from 'react-json-view-lite';
 import 'react-json-view-lite/dist/index.css';
 import { Data } from '../../model/calm.js';
+import { generateArcitectureInstanceFromPattern } from '../../../../shared/src/commands/generate/generate.js'
 
 interface JsonRendererProps {
     jsonString: Data | undefined;
@@ -25,8 +26,28 @@ export function JsonRenderer({ jsonString }: JsonRendererProps) {
             />
         </div>
     );
-    function handleClick() {
-        navigate('/visualizer', { state: jsonString });
+    async function handleClick() {
+        if(jsonString?.dataType !== "Flow" && jsonString?.dataType !== "Pattern"){
+            navigate('/visualizer', { state: jsonString });
+        }
+        else{
+            console.log(jsonString?.data)
+            const data = jsonString?.data
+            if(data){
+             let parsed;
+             if (typeof data === 'string') {
+                 parsed = JSON.parse(data);
+               } else {
+                 parsed = data; 
+               }
+             const patternArc =  await generateArcitectureInstanceFromPattern(parsed, true);
+             console.log(patternArc)
+             jsonString.data = JSON.parse(patternArc);
+             console.log(jsonString)
+             navigate('/visualizer', {state: jsonString})
+            }
+         }
+        
     }
 
     const content = jsonString ? jsonView : defaultMessage;

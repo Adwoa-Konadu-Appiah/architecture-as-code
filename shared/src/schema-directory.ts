@@ -1,5 +1,3 @@
-// import { readdir, readFile } from 'fs/promises';
-// import { join } from 'path';
 import pointer from 'json-pointer';
 import { mergeSchemas, updateStringValuesRecursively } from './util.js';
 import { initLogger } from './logger.js';
@@ -10,20 +8,24 @@ import { initLogger } from './logger.js';
  */
 export class SchemaDirectory {
     private readonly schemas: Map<string, object> = new Map<string, object>();
-    private readonly debug: boolean;
+    private readonly logger: Logger;
 
     /**
      * Initialise the SchemaDirectory. Does not load the schemas until loadSchemas is called.
      * @param directoryPath The directory path from which to load schemas. All JSON and YAML files under this path will be loaded, including subfolders.
      * @param debug Whether to log at debug level.
      */
-    constructor(debug: boolean = false) {
-        this.debug = debug;
+    constructor(logger: Logger) {
+        this.logger = logger;
+    }
+    
+    static async init(debug = false): Promise<SchemaDirectory> {
+        const logger = await initLogger(debug, 'schema-directory');
+        return new SchemaDirectory(logger);
     }
 
-    public async loadCurrentPatternAsSchema(pattern: object) {
-        const logger = await initLogger(this.debug, 'schema-directory');
-        logger.log(logger.DEBUG,'Loading current pattern as a schema.');
+    public loadCurrentPatternAsSchema(pattern: object) {
+        this.logger.log(this.logger.DEBUG,'Loading current pattern as a schema.');
         this.schemas.set('pattern', pattern);
     }
 
@@ -33,17 +35,16 @@ export class SchemaDirectory {
      * Throws an error if any schema fails to load.
      */
     public async loadSchemas(dir: string): Promise<void> {
-        const { readdir } = await import('node:fs/promises');
-        const { join } = await import('node:path');
-        const logger = await initLogger(this.debug, 'schema-directory');
+        const { readdir } = await import('fs/promises');
+        const path = await import('path');
         try {
             const map = new Map<string, object>();
-            const logger = await initLogger(this.debug, 'schema-directory');
-            logger.log(logger.DEBUG, 'Loading schemas from ' + dir);
+
+            this.logger.log(this.logger.DEBUG,'Loading schemas from ' + dir);
             const files = await readdir(dir, { recursive: true });
 
             const schemaPaths = files.filter(str => str.match(/^.*(json)$/))
-                .map(schemaPath => join(dir, schemaPath));
+                .map(schemaPath => path.join(dir, schemaPath));
             for (const schemaPath of schemaPaths) {
                 const schema = await this.loadSchema(schemaPath);
                 if (schema){
@@ -52,15 +53,15 @@ export class SchemaDirectory {
             }
 
             map.forEach((val, key) => this.schemas.set(key, val));
-            logger.log(logger.DEBUG,`Loaded ${this.schemas.size} schemas.`);
+            this.logger.log(this.logger.DEBUG,`Loaded ${this.schemas.size} schemas.`);
             this.schemas.forEach((_schema, id) => {
-                logger.log(logger.INFO, `Schema ID: ${id}`);
+                this.logger.log(this.logger.DEBUG,`Schema ID: ${id}`);
             });
         } catch (err) {
             if (err.code === 'ENOENT') {
-                logger.log(logger.INFO, 'Schema Path not found: ' + dir + ', error: ' + err.message);
+                this.logger.log(this.logger.ERROR,'Schema Path not found: ' + dir + ', error: ' + err.message);
             } else {
-                logger.log(logger.ERROR, err);
+                this.logger.log(this.logger.ERROR,err);
             }
             throw err;
         }
@@ -74,18 +75,17 @@ export class SchemaDirectory {
         return pointer.get(schema, ref);
     }
 
-    private async getDefinitionRecursive(definitionReference: string, currentSchemaId: string, visitedDefinitions: string[]) {
+    private getDefinitionRecursive(definitionReference: string, currentSchemaId: string, visitedDefinitions: string[]) {
         const splitReference = definitionReference.split('#');
         let newSchemaId = splitReference[0];
         const ref = splitReference[1];
         visitedDefinitions.push(definitionReference);
-        const logger = await initLogger(this.debug, 'schema-directory');
 
         if (!newSchemaId) {
             newSchemaId = currentSchemaId;
-            logger.log(logger.DEBUG, `Resolving reference ${ref} against current schema ${currentSchemaId}.`);
+            this.logger.log(this.logger.DEBUG,`Resolving reference ${ref} against current schema ${currentSchemaId}.`);
         }
-        logger.log(logger.DEBUG, `Recursively resolving the reference, ref: ${ref}`);
+        this.logger.log(this.logger.DEBUG,`Recursively resolving the reference, ref: ${ref}`);
         const definition = this.lookupDefinition(newSchemaId, ref);
         if (!definition) {
             // schema not defined
@@ -93,12 +93,12 @@ export class SchemaDirectory {
             return this.getMissingSchemaPlaceholder(definitionReference);
         }
         if (!definition['$ref']) {
-            logger.log(logger.DEBUG, 'Reached a definition with no ref, terminating recursive lookup.');
+            this.logger.log(this.logger.DEBUG,'Reached a definition with no ref, terminating recursive lookup.');
             return this.qualifyLocalReferences(definition, newSchemaId);
         }
         const newRef: string = definition['$ref'];
         if (visitedDefinitions.includes(newRef)) {
-            logger.log(logger.WARN, 'Circular reference detected. Terminating reference lookup. Visited definitions: ' + visitedDefinitions);
+            this.logger.log(this.logger.WARN,'Circular reference detected. Terminating reference lookup. Visited definitions: ' + visitedDefinitions);
             return definition;
         }
         const innerDef = this.getDefinitionRecursive(newRef, newSchemaId, visitedDefinitions);
@@ -120,11 +120,10 @@ export class SchemaDirectory {
      * @param definitionReference The reference to resolve. May be an absolute reference including a schema ID prefix, or a local reference.
      * @returns The resolved object, or an empty object if the object could not be resolved.
      */
-    public async getDefinition(definitionReference: string) {
-        const logger = await initLogger(this.debug, 'schema-directory');
-        logger.log(logger.DEBUG,`Resolving ${definitionReference} from schema directory.`);
+    public getDefinition(definitionReference: string) {
+        this.logger.log(this.logger.DEBUG,`Resolving ${definitionReference} from schema directory.`);
         const definition = this.getDefinitionRecursive(definitionReference, 'pattern', []);
-        logger.log(logger.DEBUG,`Resolved definition ${JSON.stringify(definition, null, 2)}`);
+        this.logger.log(this.logger.DEBUG,`Resolved definition ${JSON.stringify(definition, null, 2)}`);
         return definition;
     }
 
@@ -135,13 +134,12 @@ export class SchemaDirectory {
      * @param definition  the definition object to look at references for
      * @param schemaId the schema ID to insert
      */
-    public async qualifyLocalReferences(definition: object, schemaId: string) {
-        const logger = await initLogger(this.debug, 'schema-directory');
+    public qualifyLocalReferences(definition: object, schemaId: string) {
         return updateStringValuesRecursively(definition, (key, value) => {
             if (key === '$ref' && value.startsWith('#')) {
                 const newReference = schemaId + value;
-                logger.log(logger.DEBUG,`Detected a local reference: ${value}. Qualifying the reference with schema ID during resolution. `);
-                logger.log(logger.DEBUG,`Qualified reference: ${newReference}`);
+                this.logger.log(this.logger.DEBUG,`Detected a local reference: ${value}. Qualifying the reference with schema ID during resolution. `);
+                this.logger.log(this.logger.DEBUG,`Qualified reference: ${newReference}`);
                 return newReference;
             }
             return value;
@@ -160,34 +158,32 @@ export class SchemaDirectory {
      * @param schemaId The ID of the schema to load.
      * @returns An entire schema as an object.
      */
-    public async getSchema(schemaId: string) {
-        const logger = await initLogger(this.debug, 'schema-directory');
+    public getSchema(schemaId: string) {
         if (!this.schemas.has(schemaId)) {
             const registered = this.getLoadedSchemas();
-            logger.log(logger.WARN, `Schema with $id "${schemaId}" was not found.`);
-            logger.log(logger.WARN, 'It\'s likely that the pattern is outdated or this version of the tooling isn\'t compatible');
-            logger.log(logger.WARN, 'Please enable debug logging to see the registered schemas.');
-            logger.log(logger.DEBUG, `Registered schemas: ${registered}`);
+            this.logger.log(this.logger.WARN,`Schema with $id "${schemaId}" was not found.`);
+            this.logger.log(this.logger.WARN,'It\'s likely that the pattern is outdated or this version of the tooling isn\'t compatible');
+            this.logger.log(this.logger.WARN,'Please enable debug logging to see the registered schemas.');
+            this.logger.log(this.logger.DEBUG,`Registered schemas: ${registered}`);
             return undefined;
         }
         return this.schemas.get(schemaId);
     }
 
     private async loadSchema(schemaPath: string): Promise<object> {
-        const { readFile } = await import('node:fs/promises');
-        const logger = await initLogger(this.debug, 'schema-directory');
-        logger.log(logger.DEBUG,'Loading ' + schemaPath);
+        const { readFile } = await import('fs/promises');
+        this.logger.log(this.logger.DEBUG,'Loading ' + schemaPath);
         const str = await readFile(schemaPath, 'utf-8');
         const parsed = JSON.parse(str);
         const schemaId = parsed['$id'];
 
         if (!schemaId) {
-            logger.log(logger.WARN,`Warning: bad schema found, no $id property was defined. Path:  ${schemaPath}`);
+            this.logger.log(this.logger.WARN,'Warning: bad schema found, no $id property was defined. Path: ' + schemaPath);
             return;
         }
 
         if (!parsed['$schema']) {
-            logger.log(logger.WARN,`Warning, loaded schema does not have $schema set and therefore may be invalid. Path:  ${schemaPath}`);
+            this.logger.log(this.logger.WARN,'Warning, loaded schema does not have $schema set and therefore may be invalid. Path: ' + schemaPath);
         }
         
         return parsed;

@@ -116,7 +116,7 @@ function flattenOptionsRelationships(pattern: object, choices: CalmChoice[]): vo
  */
 export async function selectChoices(inputPattern: object, choices: CalmChoice[], debug: boolean = false): Promise<object> {
     const logger = await initLogger(debug, 'calm-generate-options');
-    logger.log(logger.DEBUG, `Selecting these choices from the pattern [${JSON.stringify(choices)}]`);
+    logger.log(logger.DEBUG,`Selecting these choices from the pattern [${JSON.stringify(choices)}]`);
 
     const pattern = {...inputPattern}; // make a copy so we don't mutate the input pattern
     const nodeIds: string[] = choices.flatMap(choice => choice.nodes);
@@ -127,6 +127,6 @@ export async function selectChoices(inputPattern: object, choices: CalmChoice[],
 
     flattenOptionsRelationships(pattern, choices);
     
-    logger.log(logger.DEBUG, `Pattern with all non chosen choices removed: [${JSON.stringify(pattern)}]`);
+    logger.log(logger.DEBUG,`Pattern with all non chosen choices removed: [${JSON.stringify(pattern)}]`);
     return pattern;
 }

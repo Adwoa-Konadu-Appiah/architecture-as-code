@@ -1,3 +1,4 @@
+
 import {describe, it, expect, vi, beforeEach, Mock} from 'vitest';
 import * as fs from 'fs';
 import { instantiate } from './instantiate'; // replace with actual relative path
@@ -8,73 +9,82 @@ interface TestInstantiatedPattern {
     relationships?: Array<Record<string, unknown>>;
 }
 
-
 vi.mock('fs');
 
-vi.mock('../../../logger', () => ({
-    initLogger: vi.fn(() => ({
-        info: vi.fn(),
-        debug: vi.fn(),
+vi.mock('../../logger', () => ({
+    initLogger: vi.fn(() => Promise.resolve({
+        INFO: 0,
+        DEBUG: 1,
+        WARN: 2,
+        ERROR: 3,
+        log: vi.fn(),
+        info: vi.fn(), 
+        warn: vi.fn(),
         error: vi.fn(),
+        debug: vi.fn()
     }))
 }));
 
 vi.mock('../../../schema-directory', async () => {
+    const mockInstance = {
+        loadSchemas: vi.fn(),
+        loadCurrentPatternAsSchema: vi.fn(),
+        getDefinition: vi.fn((ref: string) => {
+            if (ref === 'schema#/defs/node') { //intentionally not using main schema as this instantiate should be generic
+                return {
+                    required: ['node-type', 'details'],
+                    properties: {
+                        'node-type': { type: 'string' },
+                        'description': { type: 'string' },
+                        'details': {
+                            type: 'object',
+                            properties: {
+                                arch: { type: 'string' }
+                            },
+                            required: ['arch']
+                        }
+                    }
+                };
+            }
+            if (ref === 'schema#/defs/controls') {
+                return {
+                    type: 'object',
+                    patternProperties: {
+                        '^[a-zA-Z0-9-]+$': {
+                            type: 'object',
+                            properties: {
+                                description: { type: 'string' },
+                                requirements: {
+                                    type: 'array',
+                                    items: { $ref: 'schema#/defs/details' }
+                                }
+                            },
+                            required: ['description', 'requirements']
+                        }
+                    }
+                };
+            }
+            if (ref === 'schema#/defs/details') {
+                return {
+                    type: 'object',
+                    properties: {
+                        requirement: { type: 'string' },
+                        configUrl: { type: 'string' }
+                    },
+                    required: ['requirement', 'configUrl']
+                };
+            }
+            return {};
+        })
+    };
+
     return {
-        SchemaDirectory: vi.fn().mockImplementation(() => ({
-            init: vi.fn(),
-            loadSchemas: vi.fn(),
-            loadCurrentPatternAsSchema: vi.fn(),
-            getDefinition: vi.fn((ref) => {
-                if (ref === 'schema#/defs/node') { //intentionally not using main schema as this instantiate should be generic
-                    return {
-                        required: ['node-type', 'details'],
-                        properties: {
-                            'node-type': { type: 'string' },
-                            'description': { type: 'string' },
-                            'details': {
-                                type: 'object',
-                                properties: {
-                                    arch: { type: 'string' }
-                                },
-                                required: ['arch']
-                            }
-                        }
-                    };
-                }
-                if (ref === 'schema#/defs/controls') {
-                    return {
-                        type: 'object',
-                        patternProperties: {
-                            '^[a-zA-Z0-9-]+$': {
-                                type: 'object',
-                                properties: {
-                                    description: { type: 'string' },
-                                    requirements: {
-                                        type: 'array',
-                                        items: { $ref: 'schema#/defs/details' }
-                                    }
-                                },
-                                required: ['description', 'requirements']
-                            }
-                        }
-                    };
-                }
-                if (ref === 'schema#/defs/details') {
-                    return {
-                        type: 'object',
-                        properties: {
-                            requirement: { type: 'string' },
-                            configUrl: { type: 'string' }
-                        },
-                        required: ['requirement', 'configUrl']
-                    };
-                }
-                return {};
-            })
-        }))
+        SchemaDirectory: {
+            init: vi.fn().mockResolvedValue(mockInstance)
+        }
     };
 });
+
 
 describe('instantiate', () => {
     const patternPath = 'test-pattern.json';
@@ -185,4 +195,5 @@ describe('instantiate', () => {
         expect(result.nodes[0]['node-type']).toBe('[[ NODE_TYPE ]]');
         expect(result.nodes[0]['details']['arch']).toBe('[[ ARCH ]]');
     });
+    
 });

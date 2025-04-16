@@ -101,6 +101,8 @@
         log[method](`[${method.toUpperCase()}] ${label ? `[${label}] ` : ''}${msg}`);
       },
     };
+
   }
+
   
   

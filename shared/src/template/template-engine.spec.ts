@@ -4,16 +4,30 @@ import { CalmTemplateTransformer, IndexFile } from './types';
 import fs from 'fs';
 import path from 'path';
 import { vi } from 'vitest';
-
 vi.mock('fs');
+
+const mockLogger =  {
+        INFO: 0,
+        DEBUG: 1,
+        WARN: 2,
+        ERROR: 3,
+        log: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn()
+}
+
+vi.mock('../logger.js', () => ({
+    initLogger: vi.fn(() => Promise.resolve(mockLogger)),
+  }));
 
 describe('TemplateEngine', () => {
     let mockFileLoader: ReturnType<typeof vi.mocked<TemplateBundleFileLoader>>;
     let mockTransformer: ReturnType<typeof vi.mocked<CalmTemplateTransformer>>;
-    let loggerInfoSpy: ReturnType<typeof vi.spyOn>;
-    let loggerWarnSpy: ReturnType<typeof vi.spyOn>;
+    let loggerLogSpy: ReturnType<typeof vi.spyOn>;
 
-    beforeEach(() => {
+    beforeEach(async () => {
         mockFileLoader = {
             getConfig: vi.fn(),
             getTemplateFiles: vi.fn(),
@@ -23,9 +37,6 @@ describe('TemplateEngine', () => {
             registerTemplateHelpers: vi.fn().mockReturnValue({}),
             getTransformedModel: vi.fn(),
         } as unknown as ReturnType<typeof vi.mocked<CalmTemplateTransformer>>;
-
-        loggerInfoSpy = vi.spyOn(console, 'info');  
-        loggerWarnSpy = vi.spyOn(console, 'warn'); 
     });
 
     afterEach(() => {
@@ -33,7 +44,7 @@ describe('TemplateEngine', () => {
         vi.clearAllMocks();
     });
 
-    it('should log compiled templates', () => {
+    it('should log compiled templates', async () => {
         const templateConfig: IndexFile = {
             name: 'Test Template',
             transformer: 'mock-transformer',
@@ -48,11 +59,12 @@ describe('TemplateEngine', () => {
         mockFileLoader.getTemplateFiles.mockReturnValue(templateFiles);
 
         new TemplateEngine(mockFileLoader, mockTransformer);
+        await new Promise(resolve => setTimeout(resolve, 0))
 
-        expect(loggerInfoSpy).toHaveBeenCalledWith('✅ Compiled 1 Templates');
+        expect(mockLogger.log).toHaveBeenCalledWith(mockLogger.INFO, '✅ Compiled 1 Templates');
     });
 
-    it('should register template helpers', () => {
+    it('should register template helpers', async () => {
         const templateConfig: IndexFile = {
             name: 'Test Template',
             transformer: 'mock-transformer',
@@ -72,11 +84,13 @@ describe('TemplateEngine', () => {
 
         new TemplateEngine(mockFileLoader, mockTransformer);
 
-        expect(loggerInfoSpy).toHaveBeenCalledWith('🔧 Registering Handlebars Helpers...');
-        expect(loggerInfoSpy).toHaveBeenCalledWith('✅ Registered helper: uppercase');
+        await new Promise(resolve => setTimeout(resolve, 0))
+
+        expect(mockLogger.log).toHaveBeenCalledWith(mockLogger.INFO,'🔧 Registering Handlebars Helpers...');
+        expect(mockLogger.log).toHaveBeenCalledWith(mockLogger.INFO, '✅ Registered helper: uppercase');
     });
 
-    it('should log a warning for an unknown template', () => {
+    it('should log a warning for an unknown template', async () => {
         const templateConfig: IndexFile = {
             name: 'Test Template',
             transformer: 'mock-transformer',
@@ -88,8 +102,9 @@ describe('TemplateEngine', () => {
 
         const engine = new TemplateEngine(mockFileLoader, mockTransformer);
         engine.generate({}, '/output');
+        await new Promise(resolve => setTimeout(resolve, 0))
 
-        expect(loggerWarnSpy).toHaveBeenCalledWith('⚠️ Skipping unknown template: unknown.hbs');
+        expect(mockLogger.log).toHaveBeenCalledWith(mockLogger.WARN, '⚠️ Skipping unknown template: unknown.hbs');
     });
 
     it('should handle repeated output templates', () => {
@@ -159,7 +174,7 @@ describe('TemplateEngine', () => {
         expect(writeFileSyncSpy).toHaveBeenCalledWith('/output/output.txt', 'User: Alice', 'utf8');
     });
 
-    it('should log a warning when registering a missing partial template', () => {
+    it('should log a warning when registering a missing partial template', async () => {
         const templateConfig: IndexFile = {
             name: 'Test Template',
             transformer: 'mock-transformer',
@@ -175,11 +190,12 @@ describe('TemplateEngine', () => {
 
         const engine = new TemplateEngine(mockFileLoader, mockTransformer);
         engine.generate({ data: { name: 'Alice' } }, '/output');
+        await new Promise(resolve => setTimeout(resolve, 0))
 
-        expect(loggerWarnSpy).toHaveBeenCalledWith(expect.stringContaining('⚠️ Missing partial template: header.hbs'));
+        expect(mockLogger.log).toHaveBeenCalledWith(mockLogger.WARN, expect.stringContaining('⚠️ Missing partial template: header.hbs'));
     });
 
-    it('should log a warning for non-array input when expecting repeated output', () => {
+    it('should log a warning for non-array input when expecting repeated output', async () => {
         const templateConfig: IndexFile = {
             name: 'Test Template',
             transformer: 'mock-transformer',
@@ -195,11 +211,12 @@ describe('TemplateEngine', () => {
 
         const engine = new TemplateEngine(mockFileLoader, mockTransformer);
         engine.generate({ data: { id: '1', name: 'Alice' } }, '/output');
+        await new Promise(resolve => setTimeout(resolve, 0))
 
-        expect(loggerWarnSpy).toHaveBeenCalledWith(expect.stringContaining('⚠️ Expected array for repeated output, but found non-array for main.hbs'));
+        expect(mockLogger.log).toHaveBeenCalledWith(mockLogger.WARN, expect.stringContaining('⚠️ Expected array for repeated output, but found non-array for main.hbs'));
     });
 
-    it('should log a warning for an unknown output type', () => {
+    it('should log a warning for an unknown output type', async () => {
         const templateConfig: IndexFile = {
             name: 'Test Template',
             transformer: 'mock-transformer',
@@ -215,11 +232,12 @@ describe('TemplateEngine', () => {
 
         const engine = new TemplateEngine(mockFileLoader, mockTransformer);
         engine.generate({ data: { id: '1', name: 'Alice' } }, '/output');
+        await new Promise(resolve => setTimeout(resolve, 0))
 
-        expect(loggerWarnSpy).toHaveBeenCalledWith(expect.stringContaining('⚠️ Unknown output-type: invalid-type'));
+        expect(mockLogger.log).toHaveBeenCalledWith(mockLogger.WARN, expect.stringContaining('⚠️ Unknown output-type: invalid-type'));
     });
 
-    it('should log when registering a partial template', () => {
+    it('should log when registering a partial template', async () => {
         const templateConfig: IndexFile = {
             name: 'Test Template',
             transformer: 'mock-transformer',
@@ -238,7 +256,8 @@ describe('TemplateEngine', () => {
 
         const engine = new TemplateEngine(mockFileLoader, mockTransformer);
         engine.generate({ data: { name: 'Alice' } }, '/output');
+        await new Promise(resolve => setTimeout(resolve, 0))
 
-        expect(loggerInfoSpy).toHaveBeenCalledWith(expect.stringContaining('✅ Registering partial template: header.hbs'));
+        expect(mockLogger.log).toHaveBeenCalledWith(mockLogger.INFO,expect.stringContaining('✅ Registering partial template: header.hbs'));
     });
 });

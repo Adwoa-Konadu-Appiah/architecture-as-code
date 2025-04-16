@@ -1,4 +1,3 @@
-import { initLogger } from '../../../logger';
 import { SchemaDirectory } from '../../../schema-directory';
 import { getPropertyValue, JsonSchema } from './property';
 
@@ -140,8 +139,8 @@ export async function instantiate(
     schemaDirectoryPath?: string
 ): Promise<unknown> {
     // I could cast this to CALMCoreSchema here but then need to change test to not show its completely generic
-    initLogger(debug, 'calm-generate');
-    const schemaDir = new SchemaDirectory(debug);
+    // await initLogger(debug, 'calm-generate');
+    const schemaDir = await SchemaDirectory.init(debug);
 
     if (schemaDirectoryPath) {
         await schemaDir.loadSchemas(schemaDirectoryPath);
@@ -155,6 +154,5 @@ export async function instantiate(
     if (pattern.$schema) {
         output.$schema = pattern.$schema;
     }
-
     return output;
 }
