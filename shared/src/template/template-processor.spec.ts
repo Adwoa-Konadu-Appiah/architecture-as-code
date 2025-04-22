@@ -57,7 +57,7 @@ describe('TemplateProcessor', () => {
             getTransformedModel: vi.fn().mockReturnValue({ transformed: true }),
         } as unknown as ReturnType<typeof vi.mocked<CalmTemplateTransformer>>;
 
-        mockLogger = await TemplateProcessor["logger"];
+        mockLogger = await TemplateProcessor['logger'];
 
         loggerLogSpy = vi.spyOn(mockLogger, 'log').mockImplementation(vi.fn());
 

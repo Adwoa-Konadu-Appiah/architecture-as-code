@@ -1,42 +1,42 @@
 import { SchemaDirectory } from './schema-directory';
 import { readFile } from 'node:fs/promises';
 
-
 vi.mock('../../logger', () => ({
-    initLogger: vi.fn(() => Promise.resolve({
-        INFO: 0,
-        DEBUG: 1,
-        WARN: 2,
-        ERROR: 3,
-        log: vi.fn(),
-        info: vi.fn(),
-        warn: vi.fn(),
-        error: vi.fn(),
-        debug: vi.fn()
-    }))
-  }));
+    initLogger: vi.fn(() =>
+        Promise.resolve({
+            INFO: 0,
+            DEBUG: 1,
+            WARN: 2,
+            ERROR: 3,
+            log: vi.fn(),
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+            debug: vi.fn(),
+        })
+    ),
+}));
 
 afterEach(() => {
-  vi.clearAllMocks();
- }); 
+    vi.clearAllMocks();
+});
 
 describe('SchemaDirectory', () => {
-  let  schemaDir: SchemaDirectory;
+    let schemaDir: SchemaDirectory;
 
-  beforeEach(async () =>{
-    vi.clearAllMocks()
-    schemaDir = await SchemaDirectory.init()
-  })
+    beforeEach(async () => {
+        vi.clearAllMocks();
+        schemaDir = await SchemaDirectory.init();
+    });
 
     it('loads all specs from given directory including subdirectories', async () => {
-      
-      await schemaDir.loadSchemas(__dirname + '/../../calm/draft/2024-03');
-      expect(schemaDir.getLoadedSchemas().length).toBe(2);
+        await schemaDir.loadSchemas(__dirname + '/../../calm/draft/2024-03');
+        expect(schemaDir.getLoadedSchemas().length).toBe(2);
     });
-    
+
     it('throw exception when directory does not exist', async () => {
         // const schemaDir = new SchemaDirectory();
-        
+
         expect(async () => {
             await schemaDir.loadSchemas('bad-directory');
         }).rejects.toThrow();
@@ -44,10 +44,10 @@ describe('SchemaDirectory', () => {
 
     it('loads all specs from given directory including subdirectories - 2024-10 schema', async () => {
         // const schemaDir = new SchemaDirectory();
-        
+
         await schemaDir.loadSchemas(__dirname + '/../../calm/draft/2024-10');
         expect(schemaDir.getLoadedSchemas().length).toBe(8);
-        
+
         const loadedSchemas = schemaDir.getLoadedSchemas();
         const expectedFileNames = [
             'https://calm.finos.org/draft/2024-10/meta/calm.json',
@@ -57,7 +57,7 @@ describe('SchemaDirectory', () => {
             'https://calm.finos.org/draft/2024-10/meta/evidence.json',
             'https://calm.finos.org/draft/2024-10/meta/flow.json',
             'https://calm.finos.org/draft/2024-10/meta/interface.json',
-            'https://calm.finos.org/draft/2024-10/meta/units.json'
+            'https://calm.finos.org/draft/2024-10/meta/units.json',
         ];
 
         expectedFileNames.forEach((fileName, index) => {
@@ -67,9 +67,10 @@ describe('SchemaDirectory', () => {
 
     it('resolves a reference from a loaded schema', async () => {
         // const schemaDir = new SchemaDirectory();
-        
+
         await schemaDir.loadSchemas(__dirname + '/../../calm/draft/2024-03');
-        const nodeRef = 'https://raw.githubusercontent.com/finos/architecture-as-code/main/calm/draft/2024-03/meta/core.json#/defs/node';
+        const nodeRef =
+            'https://raw.githubusercontent.com/finos/architecture-as-code/main/calm/draft/2024-03/meta/core.json#/defs/node';
         const nodeDef = schemaDir.getDefinition(nodeRef);
 
         // node should have a required property of node-type
@@ -78,9 +79,10 @@ describe('SchemaDirectory', () => {
 
     it('recursively resolve references from a loaded schema', async () => {
         // const schemaDir = new SchemaDirectory();
-        
+
         await schemaDir.loadSchemas(__dirname + '/../../calm/draft/2024-04');
-        const interfaceRef = 'https://raw.githubusercontent.com/finos/architecture-as-code/main/calm/draft/2024-04/meta/interface.json#/defs/host-port-interface';
+        const interfaceRef =
+            'https://raw.githubusercontent.com/finos/architecture-as-code/main/calm/draft/2024-04/meta/interface.json#/defs/host-port-interface';
         const interfaceDef = schemaDir.getDefinition(interfaceRef);
 
         // this should include host and port, but also recursively include unique-id
@@ -88,33 +90,33 @@ describe('SchemaDirectory', () => {
         expect(interfaceDef.properties).toHaveProperty('port');
         expect(interfaceDef.properties).toHaveProperty('unique-id');
     });
-    
+
     it('qualify relative references within same file to absolute IDs', async () => {
         // const schemaDir = new SchemaDirectory();
-        
+
         await schemaDir.loadSchemas(__dirname + '/../../calm/draft/2024-04');
-        const interfaceRef = 'https://raw.githubusercontent.com/finos/architecture-as-code/main/calm/draft/2024-04/meta/interface.json#/defs/rate-limit-interface';
+        const interfaceRef =
+            'https://raw.githubusercontent.com/finos/architecture-as-code/main/calm/draft/2024-04/meta/interface.json#/defs/rate-limit-interface';
         const interfaceDef = schemaDir.getDefinition(interfaceRef);
 
-        expect(interfaceDef['properties']['key']['$ref']).toEqual('https://raw.githubusercontent.com/finos/architecture-as-code/main/calm/draft/2024-04/meta/interface.json#/defs/rate-limit-key');
+        expect(interfaceDef['properties']['key']['$ref']).toEqual(
+            'https://raw.githubusercontent.com/finos/architecture-as-code/main/calm/draft/2024-04/meta/interface.json#/defs/rate-limit-key'
+        );
     });
 
     it('resolve to warning message if schema is missing', async () => {
-        // const schemaDir = new SchemaDirectory();
-        
-        const interfaceRef = 'https://raw.githubusercontent.com/finos/architecture-as-code/main/calm/draft/2024-04/meta/interface.json#/defs/host-port-interface';
+        const interfaceRef =
+            'https://raw.githubusercontent.com/finos/architecture-as-code/main/calm/draft/2024-04/meta/interface.json#/defs/host-port-interface';
         const interfaceDef = schemaDir.getDefinition(interfaceRef);
 
         // this should include host and port, but also recursively include unique-id
         expect(interfaceDef.properties).toHaveProperty('missing-value');
-        expect(interfaceDef.properties['missing-value']).toEqual('MISSING OBJECT, ref: ' + interfaceRef + ' could not be resolved');
+        expect(interfaceDef.properties['missing-value']).toEqual(
+            'MISSING OBJECT, ref: ' + interfaceRef + ' could not be resolved'
+        );
     });
 
-
-
     it('terminate early in the case of a circular reference', async () => {
-        // const schemaDir = new SchemaDirectory();
-        
         await schemaDir.loadSchemas('test_fixtures/recursive_refs');
         const interfaceRef = 'https://calm.com/recursive.json#/$defs/top-level';
         const interfaceDef = schemaDir.getDefinition(interfaceRef);
@@ -125,15 +127,15 @@ describe('SchemaDirectory', () => {
     });
 
     it('look up self-definitions without schema ID at top level from the pattern itself', async () => {
-        // const schemaDir = new SchemaDirectory();
-
         await schemaDir.loadSchemas(__dirname + '/../../calm/draft/2024-04');
 
-        const selfRefPatternStr = await readFile('test_fixtures/api-gateway-self-reference.json', 'utf-8');
+        const selfRefPatternStr = await readFile(
+            'test_fixtures/api-gateway-self-reference.json',
+            'utf-8'
+        );
         const selfRefPattern = JSON.parse(selfRefPatternStr);
 
         schemaDir.loadCurrentPatternAsSchema(selfRefPattern);
-
 
         const nodeDef = schemaDir.getDefinition('#/defs/sample-node');
         expect(nodeDef.properties).toHaveProperty('extra-prop');
