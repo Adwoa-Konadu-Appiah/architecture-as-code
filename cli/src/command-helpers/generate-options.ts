@@ -48,10 +48,10 @@ async function getAnswersFromUser(questions: InquirerQuestion[]): Promise<string
 }
 
 export async function promptUserForOptions(pattern: object, debug: boolean = false): Promise<CalmChoice[]> {
-    const logger = initLogger(debug, 'calm-generate-options');
+    const logger = await initLogger(debug, 'calm-generate-options');
 
-    const patternOptions: CalmOption[] = extractOptions(pattern);
-    logger.debug('Pattern options extracted from pattern: [%O]', patternOptions);
+    const patternOptions: CalmOption[] = await extractOptions(pattern);
+    logger.log(logger.DEBUG,'Pattern options extracted from pattern: [%O]', patternOptions);
             
     const questions = createQuestionsFromPatternOptions(patternOptions);
     const answers: string[] = await getAnswersFromUser(questions);

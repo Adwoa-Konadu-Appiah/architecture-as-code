@@ -1,19 +1,26 @@
-import { getFormattedOutput, validate, exitBasedOffOfValidationOutcome } from '@finos/calm-shared';
+import {
+    getFormattedOutput,
+    validate,
+    exitBasedOffOfValidationOutcome,
+} from '@finos/calm-shared';
 import { initLogger } from '@finos/calm-shared';
 import { mkdirp } from 'mkdirp';
 import { writeFileSync } from 'fs';
 import path from 'path';
-import {runValidate, writeOutputFile, checkValidateOptions} from './validate';
+import { runValidate, writeOutputFile, checkValidateOptions } from './validate';
 import { Command } from 'commander';
 import { Mock } from 'vitest';
 
-vi.mock('@finos/calm-shared', async () => ({
-    ...vi.importActual('@finos/calm-shared'),
-    validate: vi.fn(),
-    getFormattedOutput: vi.fn(),
-    exitBasedOffOfValidationOutcome: vi.fn(),
-    initLogger: vi.fn()
-}));
+vi.mock('@finos/calm-shared', async () => {
+    await vi.importActual('@finos/calm-shared');
+    return {
+        ...vi.importActual('@finos/calm-shared'),
+        validate: vi.fn(),
+        getFormattedOutput: vi.fn(),
+        exitBasedOffOfValidationOutcome: vi.fn(),
+        initLogger: vi.fn(),
+    };
+});
 
 vi.mock('mkdirp', () => ({
     mkdirp: { sync: vi.fn() },
@@ -46,13 +53,24 @@ describe('runValidate', () => {
 
         await runValidate(options);
 
-        expect(validate).toHaveBeenCalledWith('arch.json', 'pattern.json', 'schemas', true);
+        expect(validate).toHaveBeenCalledWith(
+            'arch.json',
+            'pattern.json',
+            'schemas',
+            true
+        );
         expect(getFormattedOutput).toHaveBeenCalledWith(fakeOutcome, 'json');
-        expect(exitBasedOffOfValidationOutcome).toHaveBeenCalledWith(fakeOutcome, false);
+        expect(exitBasedOffOfValidationOutcome).toHaveBeenCalledWith(
+            fakeOutcome,
+            false
+        );
 
         // When output is provided, writeOutputFile should call mkdirp.sync and writeFileSync
         expect(mkdirp.sync).toHaveBeenCalledWith(path.dirname('out.json'));
-        expect(writeFileSync).toHaveBeenCalledWith('out.json', 'formatted output');
+        expect(writeFileSync).toHaveBeenCalledWith(
+            'out.json',
+            'formatted output'
+        );
     });
 
     it('should call process.exit(1) when an error occurs', async () => {
@@ -68,15 +86,30 @@ describe('runValidate', () => {
 
         const error = new Error('Validation failed');
         (validate as Mock).mockRejectedValue(error);
-        const loggerMock = { error: vi.fn(), debug: vi.fn() };
-        (initLogger as Mock).mockReturnValue(loggerMock);
-        const exitSpy = vi.spyOn(process, 'exit').mockImplementation((code?: number) => {
-            throw new Error(`process.exit called with ${code}`);
-        });
+        const loggerMock = {
+            log: vi.fn(),
+            error: vi.fn(),
+            debug: vi.fn(),
+            INFO: 0,
+            ERROR: 1,
+            DEBUG: 2,
+            WARN: 3,
+        };
+        (initLogger as Mock).mockReturnValue(Promise.resolve(loggerMock));
+        const exitSpy = vi
+            .spyOn(process, 'exit')
+            .mockImplementation((code?: number) => {
+                throw new Error(`process.exit called with ${code}`);
+            });
 
-        await expect(runValidate(options)).rejects.toThrow('process.exit called with 1');
-        expect(loggerMock.error).toHaveBeenCalledWith('An error occurred while validating: ' + error.message);
-        expect(loggerMock.debug).toHaveBeenCalled();
+        await expect(runValidate(options)).rejects.toThrow(
+            'process.exit called with 1'
+        );
+        expect(loggerMock.log).toHaveBeenCalledWith(
+            loggerMock.ERROR,
+            'An error occurred while validating: ' + error.message
+        );
+        expect(loggerMock.log).toHaveBeenCalled();
         exitSpy.mockRestore();
     });
 });
@@ -96,36 +129,70 @@ describe('writeOutputFile', () => {
 
     it('should write output to stdout if no output is provided', () => {
         const content = 'stdout content';
-        const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+        const stdoutSpy = vi
+            .spyOn(process.stdout, 'write')
+            .mockImplementation(() => true);
         writeOutputFile('', content);
         expect(stdoutSpy).toHaveBeenCalledWith(content);
         stdoutSpy.mockRestore();
     });
 });
 
-
 describe('checkValidateOptions', () => {
     it('should call program.error if neither pattern nor architecture is provided', () => {
         const program = new Command();
-        const errorSpy = vi.spyOn(program, 'error').mockImplementation((msg: string) => { throw new Error(msg); });
+        const errorSpy = vi
+            .spyOn(program, 'error')
+            .mockImplementation((msg: string) => {
+                throw new Error(msg);
+            });
         const options = {};
-        expect(() => checkValidateOptions(program, options, '-p, --pattern <file>', '-a, --architecture <file>')).toThrow(/one of the required options/);
+        expect(() =>
+            checkValidateOptions(
+                program,
+                options,
+                '-p, --pattern <file>',
+                '-a, --architecture <file>'
+            )
+        ).toThrow(/one of the required options/);
         errorSpy.mockRestore();
     });
 
     it('should not call program.error if a pattern is provided', () => {
         const program = new Command();
-        const errorSpy = vi.spyOn(program, 'error').mockImplementation((msg: string) => { throw new Error(msg); });
+        const errorSpy = vi
+            .spyOn(program, 'error')
+            .mockImplementation((msg: string) => {
+                throw new Error(msg);
+            });
         const options = { pattern: 'pattern.json' };
-        expect(() => checkValidateOptions(program, options, '-p, --pattern <file>', '-a, --architecture <file>')).not.toThrow();
+        expect(() =>
+            checkValidateOptions(
+                program,
+                options,
+                '-p, --pattern <file>',
+                '-a, --architecture <file>'
+            )
+        ).not.toThrow();
         errorSpy.mockRestore();
     });
 
     it('should not call program.error if an architecture is provided', () => {
         const program = new Command();
-        const errorSpy = vi.spyOn(program, 'error').mockImplementation((msg: string) => { throw new Error(msg); });
+        const errorSpy = vi
+            .spyOn(program, 'error')
+            .mockImplementation((msg: string) => {
+                throw new Error(msg);
+            });
         const options = { architecture: 'arch.json' };
-        expect(() => checkValidateOptions(program, options, '-p, --pattern <file>', '-a, --architecture <file>')).not.toThrow();
+        expect(() =>
+            checkValidateOptions(
+                program,
+                options,
+                '-p, --pattern <file>',
+                '-a, --architecture <file>'
+            )
+        ).not.toThrow();
         errorSpy.mockRestore();
     });
 });
