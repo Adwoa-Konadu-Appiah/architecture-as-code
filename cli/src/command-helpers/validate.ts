@@ -42,12 +42,7 @@ export function writeOutputFile(output: string, validationsOutput: string) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function checkValidateOptions(
-    program: Command,
-    options: any,
-    patternOption: string,
-    architectureOption: string
-) {
+export function checkValidateOptions(program: Command,options: any,patternOption: string,architectureOption: string) {
     if (!options.pattern && !options.architecture) {
         program.error(
             `error: one of the required options '${patternOption}' or '${architectureOption}' was not specified`
