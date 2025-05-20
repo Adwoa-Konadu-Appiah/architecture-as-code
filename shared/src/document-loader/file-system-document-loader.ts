@@ -1,8 +1,9 @@
 import { CalmDocumentType, DocumentLoader, DocumentLoadError } from './document-loader';
-import { initLogger, Logger } from '../logger';
+import { initLogger } from '../logger';
 import { readdir, readFile } from 'fs/promises';
 import { join } from 'path';
 import { SchemaDirectory } from '../schema-directory';
+import { Logger } from '../log-types';
 
 export class FileSystemDocumentLoader implements DocumentLoader {
     private readonly logger: Logger;

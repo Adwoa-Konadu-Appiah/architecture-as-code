@@ -6,7 +6,13 @@ export type ArchitectureID = string;
 export type FlowID = string;
 export type Flow = string;
 export type Version = string;
+export enum CalmDataType{
+    Patterns = 'Patterns',
+    Architectures = 'Architectures',
+    Flows = 'Flows'
+}
 export type Data = {
     name: Namespace;
     data: Pattern | Architecture | Flow | undefined;
+    dataType : CalmDataType;
 };

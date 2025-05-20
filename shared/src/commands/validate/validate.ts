@@ -5,13 +5,14 @@ import { Spectral, ISpectralDiagnostic, RulesetDefinition } from '@stoplight/spe
 import validationRulesForPattern from '../../spectral/rules-pattern';
 import validationRulesForArchitecture from '../../spectral/rules-architecture';
 import { DiagnosticSeverity } from '@stoplight/types';
-import { initLogger, Logger } from '../../logger.js';
+import { initLogger } from '../../logger.js';
 import { ValidationOutput, ValidationOutcome } from './validation.output.js';
 import { SpectralResult } from './spectral.result.js';
 import createJUnitReport from './output-formats/junit-output.js';
 import prettyFormat from './output-formats/pretty-output.js';
 import { SchemaDirectory } from '../../schema-directory.js';
 import { FileSystemDocumentLoader } from '../../document-loader/file-system-document-loader';
+import { Logger } from '../../log-types';
 
 let logger: Logger; // defined later at startup
 

@@ -1,7 +1,8 @@
 import pointer from 'json-pointer';
 import { mergeSchemas, updateStringValuesRecursively } from './util.js';
-import { initLogger, Logger } from './logger.js';
+import { initLogger } from './logger.js';
 import { CalmDocumentType, DocumentLoader, DocumentLoadError } from './document-loader/document-loader.js';
+import { Logger } from './log-types.js';
 
 /**
  * Stores a directory of schemas and resolves references against that directory.
